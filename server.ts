@@ -6,14 +6,14 @@ import { GoogleAuth } from "google-auth-library";
 
 async function startServer() {
   const app = express();
+
   const PORT = Number(process.env.PORT) || 3000;
   const isProduction = process.env.NODE_ENV === "production";
 
   app.use(express.json());
 
-  // ตรวจสอบสถานะของ Server
   app.get("/api/health", (req, res) => {
-    res.json({
+    return res.status(200).json({
       success: true,
       service: "SDMS API",
       status: "online",
@@ -22,51 +22,62 @@ async function startServer() {
     });
   });
 
-  // ดึงข้อมูลแผนงานจาก Google Sheets
   app.get("/api/docks", async (req, res) => {
     try {
       const spreadsheetId = process.env.GOOGLE_SHEET_ID;
-      const sheetName = process.env.GOOGLE_SHEET_NAME || "";
+      const sheetName = process.env.GOOGLE_SHEET_NAME;
       const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-      const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+      const privateKeyValue = process.env.GOOGLE_PRIVATE_KEY;
 
       if (!spreadsheetId) {
         return res.status(500).json({
           success: false,
-          error: "ยังไม่ได้ตั้งค่า GOOGLE_SHEET_ID บน Server",
+          error: "GOOGLE_SHEET_ID is not configured",
+        });
+      }
+
+      if (!sheetName) {
+        return res.status(500).json({
+          success: false,
+          error: "GOOGLE_SHEET_NAME is not configured",
         });
       }
 
       if (!clientEmail) {
         return res.status(500).json({
           success: false,
-          error: "ยังไม่ได้ตั้งค่า GOOGLE_CLIENT_EMAIL บน Server",
+          error: "GOOGLE_CLIENT_EMAIL is not configured",
         });
       }
 
-      if (!privateKey) {
+      if (!privateKeyValue) {
         return res.status(500).json({
           success: false,
-          error: "ยังไม่ได้ตั้งค่า GOOGLE_PRIVATE_KEY บน Server",
+          error: "GOOGLE_PRIVATE_KEY is not configured",
         });
       }
+
+      const privateKey = privateKeyValue.replace(/\\n/g, "\n");
 
       const googleAuth = new GoogleAuth({
         credentials: {
           client_email: clientEmail,
           private_key: privateKey,
         },
-        scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+        scopes: [
+          "https://www.googleapis.com/auth/spreadsheets.readonly",
+        ],
       });
 
       const authClient = await googleAuth.getClient();
 
       const sheets = google.sheets({
         version: "v4",
-        auth: authClient as any,
+        auth: authClient,
       });
 
-      const range = sheetName ? `'${sheetName}'!A:Z` : "A:Z";
+      const safeSheetName = sheetName.replace(/'/g, "''");
+      const range = `'${safeSheetName}'!A:Z`;
 
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId,
@@ -75,21 +86,20 @@ async function startServer() {
 
       const rows = response.data.values || [];
 
-      return res.json({
+      return res.status(200).json({
         success: true,
-        spreadsheetId,
-        sheetName: sheetName || "แผ่นงานแรก",
+        sheetName,
         rowCount: rows.length,
         data: rows,
         timestamp: new Date().toISOString(),
       });
     } catch (error: unknown) {
-      console.error("Error fetching Google Sheets data:", error);
+      console.error("Google Sheets read error:", error);
 
       const message =
         error instanceof Error
           ? error.message
-          : "ไม่สามารถดึงข้อมูลจาก Google Sheets ได้";
+          : "Unable to read Google Sheets data";
 
       return res.status(500).json({
         success: false,
@@ -99,7 +109,6 @@ async function startServer() {
     }
   });
 
-  // ใช้ Vite Middleware เฉพาะตอน Development
   if (!isProduction) {
     const vite = await createViteServer({
       server: {
@@ -110,17 +119,35 @@ async function startServer() {
 
     app.use(vite.middlewares);
   } else {
-    // ให้ Express เปิดไฟล์ React ที่ Build แล้วจากโฟลเดอร์ dist
     const distPath = path.resolve(process.cwd(), "dist");
+    const indexFile = path.join(distPath, "index.html");
 
     app.use(express.static(distPath));
 
-    // รองรับการเปิดหรือ Refresh ทุกหน้าของ React
-    // รูปแบบนี้รองรับ Express 5
-    app.get("/{*splat}", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+    app.use((req, res, next) => {
+      if (req.method !== "GET") {
+        return next();
+      }
+
+      if (req.path.startsWith("/api/")) {
+        return res.status(404).json({
+          success: false,
+          error: "API route not found",
+          path: req.path,
+        });
+      }
+
+      return res.sendFile(indexFile);
     });
   }
+
+  app.use((req, res) => {
+    return res.status(404).json({
+      success: false,
+      error: "Route not found",
+      path: req.path,
+    });
+  });
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`SDMS server is running on port ${PORT}`);
