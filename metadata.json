@@ -1,0 +1,6 @@
+{
+  "name": "Smart Dock Management",
+  "description": "Warehouse Operation Control Board for Real-Time Inbound Receiving",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
