@@ -101,16 +101,15 @@ export default function DockColumn({
     setMounted,
   [
 ,
-Mounted,
-] lse);
+useState(false);
 
   const [
     showOccupiedAlert,
     setShowOccupiedAlert,
-  [
-OccupiedAlert,
-ShowOccupiedAlert,
-] = useState(falseed(true);
+  ] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
 
     return () => {
       setMounted(false);
@@ -120,6 +119,7 @@ ShowOccupiedAlert,
   const closeTruckDetails =
     () => {
       setSelectedTruck(null);
+
       setShowOccupiedAlert(
         false
       );
@@ -129,6 +129,7 @@ ShowOccupiedAlert,
     truck: WaitingTruck
   ) => {
     setSelectedTruck(truck);
+
     setShowOccupiedAlert(
       false
     );
