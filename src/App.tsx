@@ -37,7 +37,9 @@ type SmartDockPlan = {
   remark: string;
   timeIn: string;
   timeOut: string;
-  durationMinutes: number | string;
+  durationMinutes:
+    | number
+    | string;
   status: SmartDockStatus;
 };
 
@@ -50,7 +52,8 @@ type SmartDockResponse = {
 };
 
 const API_BASE_URL = String(
-  import.meta.env.VITE_API_URL || ''
+  import.meta.env
+    .VITE_API_URL || ''
 ).replace(/\/+$/, '');
 
 const DOCK_CODES = [
@@ -62,78 +65,144 @@ const DOCK_CODES = [
   'L2-6',
 ];
 
-const DOCK_INDEX_BY_CODE: Record<string, number> =
-  Object.fromEntries(
-    DOCK_CODES.map((code, index) => [code, index])
-  );
+const DOCK_INDEX_BY_CODE:
+  Record<string, number> =
+    Object.fromEntries(
+      DOCK_CODES.map(
+        (code, index) => [
+          code,
+          index,
+        ]
+      )
+    );
+
+const RECONCILE_DELAY_MS =
+  15000;
 
 function getBangkokDate(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Bangkok',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
+  return new Intl.DateTimeFormat(
+    'en-CA',
+    {
+      timeZone:
+        'Asia/Bangkok',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }
+  ).format(new Date());
 }
 
-function getApiUrl(path: string): string {
-  return API_BASE_URL ? API_BASE_URL + path : path;
+function getApiUrl(
+  path: string
+): string {
+  if (!API_BASE_URL) {
+    return path;
+  }
+
+  return API_BASE_URL + path;
 }
 
-function parseApiTime(value: string): number {
+function parseApiTime(
+  value: string
+): number {
   if (!value) {
     return Date.now();
   }
 
-  const parsedTime = new Date(
-    value.replace(' ', 'T')
-  ).getTime();
+  const parsedTime =
+    new Date(
+      value.replace(
+        ' ',
+        'T'
+      )
+    ).getTime();
 
-  return Number.isNaN(parsedTime)
-    ? Date.now()
-    : parsedTime;
+  if (
+    Number.isNaN(
+      parsedTime
+    )
+  ) {
+    return Date.now();
+  }
+
+  return parsedTime;
 }
 
-function formatTime(value: string): string {
+function formatTime(
+  value: string
+): string {
   if (!value) {
     return '';
   }
 
-  if (/^\d{2}:\d{2}$/.test(value)) {
+  if (
+    /^\d{2}:\d{2}$/.test(
+      value
+    )
+  ) {
     return value;
   }
 
-  const parsedDate = new Date(
-    value.replace(' ', 'T')
-  );
+  const parsedDate =
+    new Date(
+      value.replace(
+        ' ',
+        'T'
+      )
+    );
 
-  if (Number.isNaN(parsedDate.getTime())) {
+  if (
+    Number.isNaN(
+      parsedDate.getTime()
+    )
+  ) {
     return value;
   }
 
-  return parsedDate.toLocaleTimeString('th-TH', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  return parsedDate
+    .toLocaleTimeString(
+      'th-TH',
+      {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }
+    );
 }
 
-function calculateElapsed(startTime: number) {
-  const elapsedMilliseconds = Math.max(
-    0,
-    Date.now() - startTime
-  );
-  const elapsedSeconds = Math.floor(
-    elapsedMilliseconds / 1000
-  );
-  const elapsedMinutes = Math.floor(
-    elapsedSeconds / 60
-  );
-  const elapsedHours = Math.floor(
-    elapsedMinutes / 60
-  );
-  const displayMinutes = elapsedMinutes % 60;
-  const displaySeconds = elapsedSeconds % 60;
+function calculateElapsed(
+  startTime: number
+) {
+  const elapsedMilliseconds =
+    Math.max(
+      0,
+      Date.now() -
+        startTime
+    );
+
+  const elapsedSeconds =
+    Math.floor(
+      elapsedMilliseconds /
+        1000
+    );
+
+  const elapsedMinutes =
+    Math.floor(
+      elapsedSeconds /
+        60
+    );
+
+  const elapsedHours =
+    Math.floor(
+      elapsedMinutes /
+        60
+    );
+
+  const displayMinutes =
+    elapsedMinutes % 60;
+
+  const displaySeconds =
+    elapsedSeconds % 60;
 
   return {
     elapsedMinutes,
@@ -142,577 +211,1127 @@ function calculateElapsed(startTime: number) {
       displayMinutes,
       displaySeconds,
     ]
-      .map((value) => String(value).padStart(2, '0'))
+      .map((value) =>
+        String(value)
+          .padStart(
+            2,
+            '0'
+          )
+      )
       .join(':'),
     progress: Math.min(
       100,
-      Math.floor(elapsedMinutes / 0.4)
+      Math.floor(
+        elapsedMinutes /
+          0.4
+      )
     ),
   };
 }
 
-function createEmptyDocks(): DockData[] {
-  return mockDocks.map((dock) => ({
-    ...dock,
-    status: 'empty',
-    currentTruck: null,
-    waitingQueue: [],
-  }));
+function createEmptyDocks():
+  DockData[] {
+  return mockDocks.map(
+    (dock) => ({
+      ...dock,
+      status: 'empty',
+      currentTruck: null,
+      waitingQueue: [],
+    })
+  );
 }
 
 function createWaitingTruck(
   plan: SmartDockPlan
 ): WaitingTruck {
   return {
-    id: plan.codeRun,
-    route: plan.route || '-',
-    licensePlate: plan.truckName || '-',
-    eta: plan.planEta || '',
-    driverName: plan.driverName || '',
-    telDriver: plan.telDriver || '',
-    company: plan.company || '',
-    project: plan.project || '',
-    dockCode: plan.dock,
-    isMoved: false,
+    id:
+      plan.codeRun,
+    route:
+      plan.route || '-',
+    licensePlate:
+      plan.truckName || '-',
+    eta:
+      plan.planEta || '',
+    driverName:
+      plan.driverName || '',
+    telDriver:
+      plan.telDriver || '',
+    company:
+      plan.company || '',
+    project:
+      plan.project || '',
+    dockCode:
+      plan.dock,
+    isMoved:
+      false,
   };
 }
 
 function convertPlansToDocks(
   plans: SmartDockPlan[]
 ): DockData[] {
-  const nextDocks = createEmptyDocks();
+  const nextDocks =
+    createEmptyDocks();
 
-  plans.forEach((plan) => {
-    const dockIndex = DOCK_INDEX_BY_CODE[plan.dock];
-
-    if (
-      dockIndex === undefined ||
-      plan.status === 'COMPLETED'
-    ) {
-      return;
-    }
-
-    const dock = nextDocks[dockIndex];
-
-    if (
-      plan.status === 'IN_PROGRESS' &&
-      !dock.currentTruck
-    ) {
-      const startTime = parseApiTime(plan.timeIn);
-      const elapsed = calculateElapsed(startTime);
-
-      dock.status =
-        elapsed.elapsedMinutes >= 40
-          ? 'delayed'
-          : 'unloading';
-
-      dock.currentTruck = {
-        id: plan.codeRun,
-        route: plan.route || '-',
-        licensePlate: plan.truckName || '-',
-        driver: plan.driverName || 'ไม่มีข้อมูล',
-        telDriver: plan.telDriver || '',
-        transportCo: plan.company || 'ไม่มีข้อมูล',
-        entryTime: formatTime(plan.timeIn),
-        elapsedTime: elapsed.elapsedTime,
-        progress: elapsed.progress,
-        startTime,
-      };
-
-      return;
-    }
-
-    dock.waitingQueue.push(createWaitingTruck(plan));
-  });
-
-  nextDocks.forEach((dock) => {
-    dock.waitingQueue.sort((first, second) =>
-      first.eta.localeCompare(second.eta)
-    );
-  });
-
-  return nextDocks;
-}
-
-function cloneDocks(docks: DockData[]): DockData[] {
-  return docks.map((dock) => ({
-    ...dock,
-    currentTruck: dock.currentTruck
-      ? { ...dock.currentTruck }
-      : null,
-    waitingQueue: dock.waitingQueue.map((truck) => ({
-      ...truck,
-    })),
-  }));
-}
-
-export default function App() {
-  const [isAuthenticated, setIsAuthenticated] =
-    useState(false);
-  const [time, setTime] = useState(new Date());
-  const [docks, setDocks] = useState<DockData[]>(
-    createEmptyDocks
-  );
-  const [plans, setPlans] = useState<SmartDockPlan[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [lastSync, setLastSync] = useState<Date | null>(null);
-  const [selectedDate, setSelectedDate] = useState(
-    getBangkokDate
-  );
-
-  const pendingCodeRunsRef = useRef(new Set<string>());
-  const docksRef = useRef<DockData[]>(createEmptyDocks());
-  const plansRef = useRef<SmartDockPlan[]>([]);
-  const requestSequenceRef = useRef(0);
-  const reconcileTimerRef = useRef<
-    ReturnType<typeof setTimeout> | null
-  >(null);
-
-  useEffect(() => {
-    docksRef.current = docks;
-  }, [docks]);
-
-  useEffect(() => {
-    plansRef.current = plans;
-  }, [plans]);
-
-  const fetchDockData = useCallback(
-    async (force = false) => {
-      if (!isAuthenticated) {
-        return;
-      }
+  plans.forEach(
+    (plan) => {
+      const dockIndex =
+        DOCK_INDEX_BY_CODE[
+          plan.dock
+        ];
 
       if (
-        !force &&
-        pendingCodeRunsRef.current.size > 0
+        dockIndex ===
+          undefined ||
+        plan.status ===
+          'COMPLETED'
       ) {
         return;
       }
 
-      const requestSequence =
-        requestSequenceRef.current + 1;
-      requestSequenceRef.current = requestSequence;
-      setIsLoading(true);
+      const dock =
+        nextDocks[
+          dockIndex
+        ];
 
-      try {
-        const response = await fetch(
-          getApiUrl(
-            '/api/docks?date=' +
-              encodeURIComponent(selectedDate)
-          ),
-          {
-            method: 'GET',
-            headers: {
-              Accept: 'application/json',
-            },
-          }
-        );
-
-        const data =
-          await response.json() as SmartDockResponse;
-
-        if (!response.ok || !data.success) {
-          throw new Error(
-            data.error ||
-              'ไม่สามารถดึงข้อมูลแผนงานได้'
+      if (
+        plan.status ===
+          'IN_PROGRESS' &&
+        !dock.currentTruck
+      ) {
+        const startTime =
+          parseApiTime(
+            plan.timeIn
           );
-        }
 
-        if (
-          requestSequence !== requestSequenceRef.current
-        ) {
-          return;
-        }
+        const elapsed =
+          calculateElapsed(
+            startTime
+          );
 
-        const rows = (data.result?.rows || []).filter(
-          (row) =>
-            DOCK_INDEX_BY_CODE[row.dock] !== undefined
-        );
+        dock.status =
+          elapsed
+            .elapsedMinutes >=
+          40
+            ? 'delayed'
+            : 'unloading';
 
-        setPlans(rows);
-        setDocks(convertPlansToDocks(rows));
-        setLastSync(new Date());
-        setErrorMessage('');
-      } catch (error: unknown) {
-        if (
-          requestSequence !== requestSequenceRef.current
-        ) {
-          return;
-        }
+        dock.currentTruck = {
+          id:
+            plan.codeRun,
+          route:
+            plan.route || '-',
+          licensePlate:
+            plan.truckName || '-',
+          driver:
+            plan.driverName ||
+            'ไม่มีข้อมูล',
+          telDriver:
+            plan.telDriver || '',
+          transportCo:
+            plan.company ||
+            'ไม่มีข้อมูล',
+          entryTime:
+            formatTime(
+              plan.timeIn
+            ),
+          elapsedTime:
+            elapsed.elapsedTime,
+          progress:
+            elapsed.progress,
+          startTime,
+        };
 
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'เกิดข้อผิดพลาดในการดึงข้อมูล';
-
-        console.error(
-          'Fetch Smart Dock data error:',
-          error
-        );
-        setErrorMessage(message);
-      } finally {
-        if (
-          requestSequence === requestSequenceRef.current
-        ) {
-          setIsLoading(false);
-        }
+        return;
       }
-    },
-    [isAuthenticated, selectedDate]
+
+      dock.waitingQueue.push(
+        createWaitingTruck(
+          plan
+        )
+      );
+    }
   );
 
-  const scheduleReconcile = useCallback(() => {
-    if (reconcileTimerRef.current) {
-      clearTimeout(reconcileTimerRef.current);
+  nextDocks.forEach(
+    (dock) => {
+      dock.waitingQueue.sort(
+        (
+          first,
+          second
+        ) =>
+          first.eta
+            .localeCompare(
+              second.eta
+            )
+      );
     }
+  );
 
-    reconcileTimerRef.current = setTimeout(() => {
-      void fetchDockData(true);
-    }, 1000);
-  }, [fetchDockData]);
+  return nextDocks;
+}
+
+function cloneDocks(
+  docks: DockData[]
+): DockData[] {
+  return docks.map(
+    (dock) => ({
+      ...dock,
+      currentTruck:
+        dock.currentTruck
+          ? {
+              ...dock
+                .currentTruck,
+            }
+          : null,
+      waitingQueue:
+        dock.waitingQueue.map(
+          (truck) => ({
+            ...truck,
+          })
+        ),
+    })
+  );
+}
+
+export default function App() {
+  const [
+    isAuthenticated,
+    setIsAuthenticated,
+  ] = useState(false);
+
+  const [
+    time,
+    setTime,
+  ] = useState(
+    new Date()
+  );
+
+  const [
+    docks,
+    setDocks,
+  ] = useState<
+    DockData[]
+  >(createEmptyDocks);
+
+  const [
+    plans,
+    setPlans,
+  ] = useState<
+    SmartDockPlan[]
+  >([]);
+
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(false);
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState('');
+
+  const [
+    lastSync,
+    setLastSync,
+  ] = useState<
+    Date | null
+  >(null);
+
+  const [
+    selectedDate,
+    setSelectedDate,
+  ] = useState(
+    getBangkokDate
+  );
+
+  const pendingCodeRunsRef =
+    useRef(
+      new Set<string>()
+    );
+
+  const docksRef =
+    useRef<
+      DockData[]
+    >(
+      createEmptyDocks()
+    );
+
+  const plansRef =
+    useRef<
+      SmartDockPlan[]
+    >([]);
+
+  const requestSequenceRef =
+    useRef(0);
+
+  const reconcileTimersRef =
+    useRef(
+      new Map<
+        string,
+        ReturnType<
+          typeof setTimeout
+        >
+      >()
+    );
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-
-    void fetchDockData(true);
-
-    const refreshTimer = setInterval(() => {
-      void fetchDockData();
-    }, 30000);
-
-    return () => {
-      clearInterval(refreshTimer);
-    };
-  }, [fetchDockData, isAuthenticated]);
+    docksRef.current =
+      docks;
+  }, [docks]);
 
   useEffect(() => {
-    return () => {
-      if (reconcileTimerRef.current) {
-        clearTimeout(reconcileTimerRef.current);
-      }
-    };
-  }, []);
+    plansRef.current =
+      plans;
+  }, [plans]);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
+  const fetchDockData =
+    useCallback(
+      async (
+        force = false
+      ) => {
+        if (
+          !isAuthenticated
+        ) {
+          return;
+        }
 
-    const clockTimer = setInterval(() => {
-      setTime(new Date());
+        if (
+          pendingCodeRunsRef
+            .current
+            .size > 0
+        ) {
+          return;
+        }
 
-      setDocks((previousDocks) =>
-        previousDocks.map((dock) => {
-          if (!dock.currentTruck) {
-            return dock;
+        if (
+          !force &&
+          isLoading
+        ) {
+          return;
+        }
+
+        const requestSequence =
+          requestSequenceRef
+            .current + 1;
+
+        requestSequenceRef
+          .current =
+          requestSequence;
+
+        setIsLoading(true);
+
+        try {
+          const response =
+            await fetch(
+              getApiUrl(
+                '/api/docks?date=' +
+                  encodeURIComponent(
+                    selectedDate
+                  )
+              ),
+              {
+                method: 'GET',
+                headers: {
+                  Accept:
+                    'application/json',
+                },
+              }
+            );
+
+          const data =
+            await response
+              .json() as
+              SmartDockResponse;
+
+          if (
+            !response.ok ||
+            !data.success
+          ) {
+            throw new Error(
+              data.error ||
+                'ไม่สามารถดึงข้อมูลแผนงานได้'
+            );
           }
 
-          const elapsed = calculateElapsed(
-            dock.currentTruck.startTime
+          if (
+            requestSequence !==
+            requestSequenceRef
+              .current
+          ) {
+            return;
+          }
+
+          if (
+            pendingCodeRunsRef
+              .current
+              .size > 0
+          ) {
+            return;
+          }
+
+          const rows =
+            (
+              data.result
+                ?.rows || []
+            ).filter(
+              (row) =>
+                DOCK_INDEX_BY_CODE[
+                  row.dock
+                ] !==
+                undefined
+            );
+
+          setPlans(rows);
+
+          setDocks(
+            convertPlansToDocks(
+              rows
+            )
           );
 
-          return {
-            ...dock,
-            status:
-              elapsed.elapsedMinutes >= 40
-                ? 'delayed'
-                : 'unloading',
-            currentTruck: {
-              ...dock.currentTruck,
-              elapsedTime: elapsed.elapsedTime,
-              progress: elapsed.progress,
-            },
-          };
-        })
-      );
-    }, 1000);
+          setLastSync(
+            new Date()
+          );
 
-    return () => {
-      clearInterval(clockTimer);
-    };
-  }, [isAuthenticated]);
+          setErrorMessage('');
+        } catch (
+          error: unknown
+        ) {
+          if (
+            requestSequence !==
+            requestSequenceRef
+              .current
+          ) {
+            return;
+          }
 
-  const handleDateChange = (date: string) => {
-    if (!date || date === selectedDate) {
-      return;
-    }
+          const message =
+            error instanceof
+            Error
+              ? error.message
+              : 'เกิดข้อผิดพลาดในการดึงข้อมูล';
 
-    if (pendingCodeRunsRef.current.size > 0) {
-      setErrorMessage(
-        'กรุณารอให้การบันทึกข้อมูลเสร็จก่อนเปลี่ยนวันที่'
-      );
-      return;
-    }
+          console.error(
+            'Fetch Smart Dock data error:',
+            error
+          );
 
-    requestSequenceRef.current += 1;
-    setSelectedDate(date);
-    setPlans([]);
-    setDocks(createEmptyDocks());
-    setLastSync(null);
-    setErrorMessage('');
-  };
-
-  const handleEnterDock = async (
-    dockId: string,
-    truckId: string
-  ) => {
-    if (pendingCodeRunsRef.current.has(truckId)) {
-      return;
-    }
-
-    const currentDocks = docksRef.current;
-    const dockIndex = currentDocks.findIndex(
-      (dock) => dock.id === dockId
-    );
-
-    if (dockIndex < 0) {
-      return;
-    }
-
-    const selectedDock = currentDocks[dockIndex];
-
-    if (selectedDock.currentTruck) {
-      setErrorMessage(
-        'Dock นี้กำลังปฏิบัติงานอยู่'
-      );
-      return;
-    }
-
-    const selectedTruck = selectedDock.waitingQueue.find(
-      (truck) => truck.id === truckId
-    );
-
-    if (!selectedTruck) {
-      setErrorMessage('ไม่พบข้อมูลรถในคิว');
-      return;
-    }
-
-    const dockBackup = cloneDocks(currentDocks);
-    const planBackup = plansRef.current.map((plan) => ({
-      ...plan,
-    }));
-    const startTime = Date.now();
-
-    pendingCodeRunsRef.current.add(truckId);
-    setErrorMessage('');
-
-    setDocks((previousDocks) =>
-      previousDocks.map((dock) => {
-        if (dock.id !== dockId) {
-          return dock;
+          setErrorMessage(
+            message
+          );
+        } finally {
+          if (
+            requestSequence ===
+            requestSequenceRef
+              .current
+          ) {
+            setIsLoading(
+              false
+            );
+          }
         }
-
-        return {
-          ...dock,
-          status: 'unloading',
-          currentTruck: {
-            id: selectedTruck.id,
-            route: selectedTruck.route,
-            licensePlate: selectedTruck.licensePlate,
-            driver:
-              selectedTruck.driverName || 'ไม่มีข้อมูล',
-            telDriver: selectedTruck.telDriver,
-            transportCo:
-              selectedTruck.company || 'ไม่มีข้อมูล',
-            entryTime: new Date(
-              startTime
-            ).toLocaleTimeString('th-TH', {
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: false,
-            }),
-            elapsedTime: '00:00:00',
-            progress: 0,
-            startTime,
-          },
-          waitingQueue: dock.waitingQueue.filter(
-            (truck) => truck.id !== truckId
-          ),
-        };
-      })
+      },
+      [
+        isAuthenticated,
+        isLoading,
+        selectedDate,
+      ]
     );
 
-    setPlans((previousPlans) =>
-      previousPlans.map((plan) =>
-        plan.codeRun === truckId
-          ? {
-              ...plan,
-              status: 'IN_PROGRESS',
-              timeIn: new Date(startTime).toISOString(),
-            }
-          : plan
-      )
-    );
+  const clearReconcileTimer =
+    useCallback(
+      (
+        codeRun: string
+      ) => {
+        const timer =
+          reconcileTimersRef
+            .current
+            .get(codeRun);
 
-    try {
-      const response = await fetch(
-        getApiUrl('/api/smart-dock/start'),
-        {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            codeRun: truckId,
-            route: selectedTruck.route,
-            dock: DOCK_CODES[dockIndex],
-          }),
+        if (timer) {
+          clearTimeout(
+            timer
+          );
+
+          reconcileTimersRef
+            .current
+            .delete(
+              codeRun
+            );
         }
-      );
+      },
+      []
+    );
 
-      const data =
-        await response.json() as SmartDockResponse;
-
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.error || 'ไม่สามารถเริ่มงานได้'
+  const scheduleReconcile =
+    useCallback(
+      (
+        codeRun: string
+      ) => {
+        clearReconcileTimer(
+          codeRun
         );
-      }
 
-      setLastSync(new Date());
-    } catch (error: unknown) {
-      setDocks(dockBackup);
-      setPlans(planBackup);
+        const timer =
+          setTimeout(() => {
+            pendingCodeRunsRef
+              .current
+              .delete(
+                codeRun
+              );
 
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'เกิดข้อผิดพลาดในการเริ่มงาน';
+            reconcileTimersRef
+              .current
+              .delete(
+                codeRun
+              );
 
-      setErrorMessage(message);
-    } finally {
-      pendingCodeRunsRef.current.delete(truckId);
-      scheduleReconcile();
-    }
-  };
+            void fetchDockData(
+              true
+            );
+          }, RECONCILE_DELAY_MS);
 
-  const handleFinishOperation = async (
-    dockId: string
-  ) => {
-    const currentDocks = docksRef.current;
-    const dockIndex = currentDocks.findIndex(
-      (dock) => dock.id === dockId
+        reconcileTimersRef
+          .current
+          .set(
+            codeRun,
+            timer
+          );
+      },
+      [
+        clearReconcileTimer,
+        fetchDockData,
+      ]
     );
 
-    if (dockIndex < 0) {
-      return;
-    }
-
-    const currentTruck =
-      currentDocks[dockIndex].currentTruck;
-
-    if (!currentTruck) {
-      return;
-    }
-
+  useEffect(() => {
     if (
-      pendingCodeRunsRef.current.has(currentTruck.id)
+      !isAuthenticated
     ) {
       return;
     }
 
-    const dockBackup = cloneDocks(currentDocks);
-    const planBackup = plansRef.current.map((plan) => ({
-      ...plan,
-    }));
-
-    pendingCodeRunsRef.current.add(currentTruck.id);
-    setErrorMessage('');
-
-    setDocks((previousDocks) =>
-      previousDocks.map((dock) =>
-        dock.id === dockId
-          ? {
-              ...dock,
-              status: 'empty',
-              currentTruck: null,
-            }
-          : dock
-      )
+    void fetchDockData(
+      true
     );
 
-    setPlans((previousPlans) =>
-      previousPlans.map((plan) =>
-        plan.codeRun === currentTruck.id
-          ? {
-              ...plan,
-              status: 'COMPLETED',
-              timeOut: new Date().toISOString(),
-            }
-          : plan
-      )
-    );
+    const refreshTimer =
+      setInterval(() => {
+        void fetchDockData();
+      }, 30000);
 
-    try {
-      const response = await fetch(
-        getApiUrl('/api/smart-dock/complete'),
-        {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            codeRun: currentTruck.id,
-          }),
-        }
+    return () => {
+      clearInterval(
+        refreshTimer
+      );
+    };
+  }, [
+    fetchDockData,
+    isAuthenticated,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      reconcileTimersRef
+        .current
+        .forEach(
+          (timer) => {
+            clearTimeout(
+              timer
+            );
+          }
+        );
+
+      reconcileTimersRef
+        .current
+        .clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      !isAuthenticated
+    ) {
+      return;
+    }
+
+    const clockTimer =
+      setInterval(() => {
+        setTime(
+          new Date()
+        );
+
+        setDocks(
+          (
+            previousDocks
+          ) =>
+            previousDocks.map(
+              (dock) => {
+                if (
+                  !dock
+                    .currentTruck
+                ) {
+                  return dock;
+                }
+
+                const elapsed =
+                  calculateElapsed(
+                    dock
+                      .currentTruck
+                      .startTime
+                  );
+
+                return {
+                  ...dock,
+                  status:
+                    elapsed
+                      .elapsedMinutes >=
+                    40
+                      ? 'delayed'
+                      : 'unloading',
+                  currentTruck: {
+                    ...dock
+                      .currentTruck,
+                    elapsedTime:
+                      elapsed
+                        .elapsedTime,
+                    progress:
+                      elapsed
+                        .progress,
+                  },
+                };
+              }
+            )
+        );
+      }, 1000);
+
+    return () => {
+      clearInterval(
+        clockTimer
+      );
+    };
+  }, [isAuthenticated]);
+
+  const handleDateChange = (
+    date: string
+  ) => {
+    if (
+      !date ||
+      date === selectedDate
+    ) {
+      return;
+    }
+
+    if (
+      pendingCodeRunsRef
+        .current
+        .size > 0
+    ) {
+      setErrorMessage(
+        'กรุณารอให้การบันทึกข้อมูลเสร็จก่อนเปลี่ยนวันที่'
       );
 
-      const data =
-        await response.json() as SmartDockResponse;
-
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.error || 'ไม่สามารถจบงานได้'
-        );
-      }
-
-      setLastSync(new Date());
-    } catch (error: unknown) {
-      setDocks(dockBackup);
-      setPlans(planBackup);
-
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'เกิดข้อผิดพลาดในการจบงาน';
-
-      setErrorMessage(message);
-    } finally {
-      pendingCodeRunsRef.current.delete(currentTruck.id);
-      scheduleReconcile();
+      return;
     }
+
+    requestSequenceRef
+      .current += 1;
+
+    setSelectedDate(
+      date
+    );
+
+    setPlans([]);
+
+    setDocks(
+      createEmptyDocks()
+    );
+
+    setLastSync(null);
+
+    setErrorMessage('');
   };
 
+  const handleEnterDock =
+    async (
+      dockId: string,
+      truckId: string
+    ) => {
+      if (
+        pendingCodeRunsRef
+          .current
+          .has(truckId)
+      ) {
+        return;
+      }
+
+      const currentDocks =
+        docksRef.current;
+
+      const dockIndex =
+        currentDocks
+          .findIndex(
+            (dock) =>
+              dock.id ===
+              dockId
+          );
+
+      if (dockIndex < 0) {
+        return;
+      }
+
+      const selectedDock =
+        currentDocks[
+          dockIndex
+        ];
+
+      if (
+        selectedDock
+          .currentTruck
+      ) {
+        setErrorMessage(
+          'Dock นี้กำลังปฏิบัติงานอยู่'
+        );
+
+        return;
+      }
+
+      const selectedTruck =
+        selectedDock
+          .waitingQueue
+          .find(
+            (truck) =>
+              truck.id ===
+              truckId
+          );
+
+      if (!selectedTruck) {
+        setErrorMessage(
+          'ไม่พบข้อมูลรถในคิว'
+        );
+
+        return;
+      }
+
+      const route =
+        String(
+          selectedTruck.route ||
+            ''
+        ).trim();
+
+      if (!route) {
+        setErrorMessage(
+          'ไม่พบ Route ของรถรายการนี้'
+        );
+
+        return;
+      }
+
+      const dockBackup =
+        cloneDocks(
+          currentDocks
+        );
+
+      const planBackup =
+        plansRef.current
+          .map(
+            (plan) => ({
+              ...plan,
+            })
+          );
+
+      const startTime =
+        Date.now();
+
+      pendingCodeRunsRef
+        .current
+        .add(
+          truckId
+        );
+
+      setErrorMessage('');
+
+      setDocks(
+        (
+          previousDocks
+        ) =>
+          previousDocks.map(
+            (dock) => {
+              if (
+                dock.id !==
+                dockId
+              ) {
+                return dock;
+              }
+
+              return {
+                ...dock,
+                status:
+                  'unloading',
+                currentTruck: {
+                  id:
+                    selectedTruck.id,
+                  route,
+                  licensePlate:
+                    selectedTruck
+                      .licensePlate,
+                  driver:
+                    selectedTruck
+                      .driverName ||
+                    'ไม่มีข้อมูล',
+                  telDriver:
+                    selectedTruck
+                      .telDriver,
+                  transportCo:
+                    selectedTruck
+                      .company ||
+                    'ไม่มีข้อมูล',
+                  entryTime:
+                    new Date(
+                      startTime
+                    )
+                      .toLocaleTimeString(
+                        'th-TH',
+                        {
+                          hour:
+                            '2-digit',
+                          minute:
+                            '2-digit',
+                          hour12:
+                            false,
+                        }
+                      ),
+                  elapsedTime:
+                    '00:00:00',
+                  progress:
+                    0,
+                  startTime,
+                },
+                waitingQueue:
+                  dock
+                    .waitingQueue
+                    .filter(
+                      (truck) =>
+                        truck.id !==
+                        truckId
+                    ),
+              };
+            }
+          )
+      );
+
+      setPlans(
+        (
+          previousPlans
+        ) =>
+          previousPlans.map(
+            (plan) =>
+              plan.codeRun ===
+              truckId
+                ? {
+                    ...plan,
+                    status:
+                      'IN_PROGRESS',
+                    timeIn:
+                      new Date(
+                        startTime
+                      )
+                        .toISOString(),
+                  }
+                : plan
+          )
+      );
+
+      try {
+        const response =
+          await fetch(
+            getApiUrl(
+              '/api/smart-dock/start'
+            ),
+            {
+              method:
+                'POST',
+              headers: {
+                Accept:
+                  'application/json',
+                'Content-Type':
+                  'application/json',
+              },
+              body:
+                JSON.stringify({
+                  codeRun:
+                    truckId,
+                  route,
+                  dock:
+                    DOCK_CODES[
+                      dockIndex
+                    ],
+                }),
+            }
+          );
+
+        const data =
+          await response
+            .json() as
+            SmartDockResponse;
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.error ||
+              'ไม่สามารถเริ่มงานได้'
+          );
+        }
+
+        setLastSync(
+          new Date()
+        );
+
+        scheduleReconcile(
+          truckId
+        );
+      } catch (
+        error: unknown
+      ) {
+        clearReconcileTimer(
+          truckId
+        );
+
+        pendingCodeRunsRef
+          .current
+          .delete(
+            truckId
+          );
+
+        setDocks(
+          dockBackup
+        );
+
+        setPlans(
+          planBackup
+        );
+
+        const message =
+          error instanceof
+          Error
+            ? error.message
+            : 'เกิดข้อผิดพลาดในการเริ่มงาน';
+
+        setErrorMessage(
+          message
+        );
+      }
+    };
+
+  const handleFinishOperation =
+    async (
+      dockId: string
+    ) => {
+      const currentDocks =
+        docksRef.current;
+
+      const dockIndex =
+        currentDocks
+          .findIndex(
+            (dock) =>
+              dock.id ===
+              dockId
+          );
+
+      if (dockIndex < 0) {
+        return;
+      }
+
+      const currentTruck =
+        currentDocks[
+          dockIndex
+        ].currentTruck;
+
+      if (!currentTruck) {
+        return;
+      }
+
+      if (
+        pendingCodeRunsRef
+          .current
+          .has(
+            currentTruck.id
+          )
+      ) {
+        return;
+      }
+
+      const dockBackup =
+        cloneDocks(
+          currentDocks
+        );
+
+      const planBackup =
+        plansRef.current
+          .map(
+            (plan) => ({
+              ...plan,
+            })
+          );
+
+      pendingCodeRunsRef
+        .current
+        .add(
+          currentTruck.id
+        );
+
+      setErrorMessage('');
+
+      setDocks(
+        (
+          previousDocks
+        ) =>
+          previousDocks.map(
+            (dock) =>
+              dock.id ===
+              dockId
+                ? {
+                    ...dock,
+                    status:
+                      'empty',
+                    currentTruck:
+                      null,
+                  }
+                : dock
+          )
+      );
+
+      setPlans(
+        (
+          previousPlans
+        ) =>
+          previousPlans.map(
+            (plan) =>
+              plan.codeRun ===
+              currentTruck.id
+                ? {
+                    ...plan,
+                    status:
+                      'COMPLETED',
+                    timeOut:
+                      new Date()
+                        .toISOString(),
+                  }
+                : plan
+          )
+      );
+
+      try {
+        const response =
+          await fetch(
+            getApiUrl(
+              '/api/smart-dock/complete'
+            ),
+            {
+              method:
+                'POST',
+              headers: {
+                Accept:
+                  'application/json',
+                'Content-Type':
+                  'application/json',
+              },
+              body:
+                JSON.stringify({
+                  codeRun:
+                    currentTruck.id,
+                }),
+            }
+          );
+
+        const data =
+          await response
+            .json() as
+            SmartDockResponse;
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.error ||
+              'ไม่สามารถจบงานได้'
+          );
+        }
+
+        setLastSync(
+          new Date()
+        );
+
+        scheduleReconcile(
+          currentTruck.id
+        );
+      } catch (
+        error: unknown
+      ) {
+        clearReconcileTimer(
+          currentTruck.id
+        );
+
+        pendingCodeRunsRef
+          .current
+          .delete(
+            currentTruck.id
+          );
+
+        setDocks(
+          dockBackup
+        );
+
+        setPlans(
+          planBackup
+        );
+
+        const message =
+          error instanceof
+          Error
+            ? error.message
+            : 'เกิดข้อผิดพลาดในการจบงาน';
+
+        setErrorMessage(
+          message
+        );
+      }
+    };
+
   const handleDragStart = (
-    event: React.DragEvent,
+    event:
+      React.DragEvent,
     truckId: string,
     sourceDockId: string
   ) => {
-    event.dataTransfer.setData(
-      'application/json',
-      JSON.stringify({
-        truckId,
-        sourceDockId,
-      })
-    );
+    event.dataTransfer
+      .setData(
+        'application/json',
+        JSON.stringify({
+          truckId,
+          sourceDockId,
+        })
+      );
   };
 
   const handleDrop = (
-    event: React.DragEvent,
+    event:
+      React.DragEvent,
     targetDockId: string
   ) => {
     event.preventDefault();
 
     try {
       const transferredData =
-        event.dataTransfer.getData(
-          'application/json'
-        );
+        event.dataTransfer
+          .getData(
+            'application/json'
+          );
 
       if (!transferredData) {
         return;
@@ -721,87 +1340,147 @@ export default function App() {
       const {
         truckId,
         sourceDockId,
-      } = JSON.parse(transferredData) as {
+      } = JSON.parse(
+        transferredData
+      ) as {
         truckId: string;
         sourceDockId: string;
       };
 
-      if (sourceDockId === targetDockId) {
+      if (
+        sourceDockId ===
+        targetDockId
+      ) {
         return;
       }
 
-      setDocks((previousDocks) => {
-        const nextDocks = cloneDocks(previousDocks);
-        const sourceDockIndex = nextDocks.findIndex(
-          (dock) => dock.id === sourceDockId
-        );
-        const targetDockIndex = nextDocks.findIndex(
-          (dock) => dock.id === targetDockId
-        );
+      setDocks(
+        (
+          previousDocks
+        ) => {
+          const nextDocks =
+            cloneDocks(
+              previousDocks
+            );
 
-        if (
-          sourceDockIndex < 0 ||
-          targetDockIndex < 0
-        ) {
-          return previousDocks;
-        }
+          const sourceDockIndex =
+            nextDocks
+              .findIndex(
+                (dock) =>
+                  dock.id ===
+                  sourceDockId
+              );
 
-        const truckIndex =
+          const targetDockIndex =
+            nextDocks
+              .findIndex(
+                (dock) =>
+                  dock.id ===
+                  targetDockId
+              );
+
+          if (
+            sourceDockIndex <
+              0 ||
+            targetDockIndex <
+              0
+          ) {
+            return previousDocks;
+          }
+
+          const truckIndex =
+            nextDocks[
+              sourceDockIndex
+            ].waitingQueue
+              .findIndex(
+                (truck) =>
+                  truck.id ===
+                  truckId
+              );
+
+          if (
+            truckIndex < 0
+          ) {
+            return previousDocks;
+          }
+
+          const movedTruck =
+            nextDocks[
+              sourceDockIndex
+            ].waitingQueue
+              .splice(
+                truckIndex,
+                1
+              )[0];
+
           nextDocks[
-            sourceDockIndex
-          ].waitingQueue.findIndex(
-            (truck) => truck.id === truckId
-          );
+            targetDockIndex
+          ].waitingQueue
+            .push({
+              ...movedTruck,
+              isMoved: true,
+            });
 
-        if (truckIndex < 0) {
-          return previousDocks;
-        }
-
-        const movedTruck =
           nextDocks[
-            sourceDockIndex
-          ].waitingQueue.splice(
-            truckIndex,
-            1
-          )[0];
+            targetDockIndex
+          ].waitingQueue
+            .sort(
+              (
+                first,
+                second
+              ) =>
+                first.eta
+                  .localeCompare(
+                    second.eta
+                  )
+            );
 
-        nextDocks[
-          targetDockIndex
-        ].waitingQueue.push({
-          ...movedTruck,
-          isMoved: true,
-        });
-
-        nextDocks[
-          targetDockIndex
-        ].waitingQueue.sort((first, second) =>
-          first.eta.localeCompare(second.eta)
-        );
-
-        return nextDocks;
-      });
+          return nextDocks;
+        }
+      );
     } catch (error) {
-      console.error('Move queue error:', error);
-      setErrorMessage('ไม่สามารถย้ายคิวรถได้');
+      console.error(
+        'Move queue error:',
+        error
+      );
+
+      setErrorMessage(
+        'ไม่สามารถย้ายคิวรถได้'
+      );
     }
   };
 
-  const activeDocks = docks.filter(
-    (dock) => dock.currentTruck !== null
-  ).length;
+  const activeDocks =
+    docks.filter(
+      (dock) =>
+        dock.currentTruck !==
+        null
+    ).length;
 
-  const kpiData: KPIData = {
-    totalTrucks: plans.filter(
-      (plan) => plan.status !== 'COMPLETED'
-    ).length,
-    waitingTrucks: plans.filter(
-      (plan) => plan.status === 'WAITING'
-    ).length,
+  const kpiData:
+    KPIData = {
+    totalTrucks:
+      plans.filter(
+        (plan) =>
+          plan.status !==
+          'COMPLETED'
+      ).length,
+    waitingTrucks:
+      plans.filter(
+        (plan) =>
+          plan.status ===
+          'WAITING'
+      ).length,
     activeDocks,
-    emptyDocks: docks.length - activeDocks,
-    delayedDocks: docks.filter(
-      (dock) => dock.status === 'delayed'
-    ).length,
+    emptyDocks:
+      docks.length -
+      activeDocks,
+    delayedDocks:
+      docks.filter(
+        (dock) =>
+          dock.status ===
+          'delayed'
+      ).length,
     utilization:
       docks.length > 0
         ? Math.round(
@@ -815,7 +1494,11 @@ export default function App() {
   if (!isAuthenticated) {
     return (
       <Login
-        onLogin={() => setIsAuthenticated(true)}
+        onLogin={() =>
+          setIsAuthenticated(
+            true
+          )
+        }
       />
     );
   }
@@ -824,9 +1507,15 @@ export default function App() {
     <div className="flex flex-col h-screen bg-slate-50 font-sans overflow-hidden border-8 border-slate-200">
       <Header
         time={time}
-        kpiData={kpiData}
-        selectedDate={selectedDate}
-        onDateChange={handleDateChange}
+        kpiData={
+          kpiData
+        }
+        selectedDate={
+          selectedDate
+        }
+        onDateChange={
+          handleDateChange
+        }
       />
 
       {errorMessage && (
@@ -835,39 +1524,63 @@ export default function App() {
         </div>
       )}
 
-      {isLoading && !lastSync && (
-        <div className="bg-blue-600 text-white text-sm font-bold px-4 py-2 text-center">
-          กำลังโหลดข้อมูลแผนงานวันที่ {selectedDate}
-        </div>
-      )}
+      {isLoading &&
+        !lastSync && (
+          <div className="bg-blue-600 text-white text-sm font-bold px-4 py-2 text-center">
+            กำลังโหลดข้อมูลแผนงานวันที่{' '}
+            {selectedDate}
+          </div>
+        )}
 
       <main className="flex-1 grid grid-cols-6 divide-x divide-slate-300 bg-slate-200 overflow-hidden">
-        {docks.map((dock) => (
-          <DockColumn
-            key={dock.id}
-            dock={dock}
-            time={time}
-            onFinish={() =>
-              handleFinishOperation(dock.id)
-            }
-            onEnterDock={(truckId) =>
-              handleEnterDock(dock.id, truckId)
-            }
-            onDragStart={(event, truckId) =>
-              handleDragStart(
-                event,
-                truckId,
+        {docks.map(
+          (dock) => (
+            <DockColumn
+              key={
                 dock.id
-              )
-            }
-            onDrop={(event) =>
-              handleDrop(event, dock.id)
-            }
-            onDragOver={(event) =>
-              event.preventDefault()
-            }
-          />
-        ))}
+              }
+              dock={dock}
+              time={time}
+              onFinish={() =>
+                handleFinishOperation(
+                  dock.id
+                )
+              }
+              onEnterDock={(
+                truckId
+              ) =>
+                handleEnterDock(
+                  dock.id,
+                  truckId
+                )
+              }
+              onDragStart={(
+                event,
+                truckId
+              ) =>
+                handleDragStart(
+                  event,
+                  truckId,
+                  dock.id
+                )
+              }
+              onDrop={(
+                event
+              ) =>
+                handleDrop(
+                  event,
+                  dock.id
+                )
+              }
+              onDragOver={(
+                event
+              ) =>
+                event
+                  .preventDefault()
+              }
+            />
+          )
+        )}
       </main>
 
       <footer className="h-8 bg-slate-800 text-slate-400 flex items-center justify-between px-6 text-[10px] font-bold uppercase tracking-widest shrink-0">
@@ -876,9 +1589,11 @@ export default function App() {
             <span
               className={
                 'w-2 h-2 rounded-full ' +
-                (errorMessage
-                  ? 'bg-red-500'
-                  : 'bg-emerald-500')
+                (
+                  errorMessage
+                    ? 'bg-red-500'
+                    : 'bg-emerald-500'
+                )
               }
             />
 
@@ -887,33 +1602,48 @@ export default function App() {
               : 'SYSTEM STABLE'}
           </span>
 
-          <span className="text-slate-600">|</span>
-
-          <span>
-            PLAN DATE: {selectedDate}
+          <span className="text-slate-600">
+            |
           </span>
 
-          <span className="text-slate-600">|</span>
+          <span>
+            PLAN DATE:{' '}
+            {selectedDate}
+          </span>
+
+          <span className="text-slate-600">
+            |
+          </span>
 
           <span>
             LAST SYNC:{' '}
             {lastSync
-              ? lastSync.toLocaleTimeString(
-                  'th-TH',
-                  {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false,
-                  }
-                )
+              ? lastSync
+                  .toLocaleTimeString(
+                    'th-TH',
+                    {
+                      hour:
+                        '2-digit',
+                      minute:
+                        '2-digit',
+                      second:
+                        '2-digit',
+                      hour12:
+                        false,
+                    }
+                  )
               : 'WAITING'}
           </span>
         </div>
 
         <div className="flex items-center gap-6">
-          <span>6 DOCKS ONLINE</span>
-          <span>ZONE: A-WEST WAREHOUSE</span>
+          <span>
+            6 DOCKS ONLINE
+          </span>
+
+          <span>
+            ZONE: A-WEST WAREHOUSE
+          </span>
         </div>
       </footer>
     </div>
