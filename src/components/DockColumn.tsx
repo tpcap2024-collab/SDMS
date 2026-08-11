@@ -1,14 +1,5 @@
-import React, {
-  useEffect,
-  useState,
-} from 'react';
-import {
-  createPortal,
-} from 'react-dom';
-import {
-  AnimatePresence,
-  motion,
-} from 'motion/react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertCircle,
   CheckCircle2,
@@ -41,36 +32,94 @@ interface DockColumnProps {
   ) => void;
 }
 
+interface StatusConfig {
+  container: string;
+  header: string;
+  badge: string;
+  queueContainer: string;
+  queueHeader: string;
+  queueItem: string;
+  queueText: string;
+}
+
+function getStatusConfig(
+  status: DockStatus
+): StatusConfig {
+  if (status === 'unloading') {
+    return {
+      container: 'bg-white',
+      header:
+        'bg-yellow-400 text-black',
+      badge: 'กำลังลงงาน',
+      queueContainer:
+        'bg-slate-50 border-slate-200',
+      queueHeader:
+        'text-slate-400',
+      queueItem:
+        'border-slate-200',
+      queueText:
+        'text-yellow-600',
+    };
+  }
+
+  if (status === 'delayed') {
+    return {
+      container:
+        'bg-rose-50/30',
+      header:
+        'bg-[#ff0000] text-black',
+      badge: 'ผิดปกติ',
+      queueContainer:
+        'bg-white border-slate-200',
+      queueHeader:
+        'text-slate-400',
+      queueItem:
+        'border-slate-200',
+      queueText:
+        'text-slate-500',
+    };
+  }
+
+  return {
+    container:
+      'bg-white opacity-95',
+    header:
+      'bg-[#00ff00] text-black',
+    badge: 'ว่าง',
+    queueContainer:
+      'bg-slate-50 border-slate-200',
+    queueHeader:
+      'text-slate-400',
+    queueItem:
+      'border-slate-200',
+    queueText:
+      'text-emerald-500',
+  };
+}
+
+function getDisplayText(
+  value: string
+): string {
+  const cleaned =
+    String(value || '').trim();
+
+  return cleaned ||
+    'ไม่มีข้อมูล';
+}
+
 function createPhoneLink(
   value: string
 ): string {
-  const cleanedPhone =
+  const cleaned =
     String(value || '')
       .replace(
         /[^0-9+]/g,
         ''
       );
 
-  if (!cleanedPhone) {
-    return '';
-  }
-
-  return 'tel:' +
-    cleanedPhone;
-}
-
-function getDisplayText(
-  value: string
-): string {
-  const cleanedValue =
-    String(value || '')
-      .trim();
-
-  if (!cleanedValue) {
-    return 'ไม่มีข้อมูล';
-  }
-
-  return cleanedValue;
+  return cleaned
+    ? 'tel:' + cleaned
+    : '';
 }
 
 export default function DockColumn({
@@ -97,161 +146,9 @@ export default function DockColumn({
   >(null);
 
   const [
-    mounted,
-    setMounted,
-  [
-,
-useState(false);
-
-  const [
     showOccupiedAlert,
     setShowOccupiedAlert,
   ] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-
-    return () => {
-      setMounted(false);
-    };
-  }, []);
-
-  const closeTruckDetails =
-    () => {
-      setSelectedTruck(null);
-
-      setShowOccupiedAlert(
-        false
-      );
-    };
-
-  const openTruckDetails = (
-    truck: WaitingTruck
-  ) => {
-    setSelectedTruck(truck);
-
-    setShowOccupiedAlert(
-      false
-    );
-  };
-
-  const confirmCalledTruck =
-    () => {
-      if (!selectedTruck) {
-        return;
-      }
-
-      setCalledTrucks(
-        (previousState) => ({
-          ...previousState,
-          [selectedTruck.id]:
-            true,
-        })
-      );
-    };
-
-  const cancelCalledTruck =
-    () => {
-      if (!selectedTruck) {
-        return;
-      }
-
-      setCalledTrucks(
-        (previousState) => ({
-          ...previousState,
-          [selectedTruck.id]:
-            false,
-        })
-      );
-    };
-
-  const enterSelectedTruck =
-    () => {
-      if (!selectedTruck) {
-        return;
-      }
-
-      if (dock.currentTruck) {
-        setShowOccupiedAlert(
-          true
-        );
-
-        return;
-      }
-
-      if (onEnterDock) {
-        onEnterDock(
-          selectedTruck.id
-        );
-      }
-
-      closeTruckDetails();
-    };
-
-  const getStatusConfig = (
-    status: DockStatus
-  ) => {
-    if (
-      status ===
-      'unloading'
-    ) {
-      return {
-        container:
-          'bg-white',
-        header:
-          'bg-yellow-400 text-black',
-        badge:
-          'กำลังลงงาน',
-        queueContainer:
-          'bg-slate-50 border-slate-200',
-        queueHeader:
-          'text-slate-400',
-        queueItem:
-          'border-slate-200',
-        queueText:
-          'text-yellow-600',
-      };
-    }
-
-    if (
-      status ===
-      'delayed'
-    ) {
-      return {
-        container:
-          'bg-rose-50/30',
-        header:
-          'bg-[#ff0000] text-black',
-        badge:
-          'ผิดปกติ',
-        queueContainer:
-          'bg-white border-slate-200',
-        queueHeader:
-          'text-slate-400',
-        queueItem:
-          'border-slate-200',
-        queueText:
-          'text-slate-500',
-      };
-    }
-
-    return {
-      container:
-        'bg-white opacity-95',
-      header:
-        'bg-[#00ff00] text-black',
-      badge:
-        'ว่าง',
-      queueContainer:
-        'bg-slate-50 border-slate-200',
-      queueHeader:
-        'text-slate-400',
-      queueItem:
-        'border-slate-200',
-      queueText:
-        'text-emerald-500',
-    };
-  };
 
   const config =
     getStatusConfig(
@@ -269,6 +166,12 @@ useState(false);
         .length - 5
     );
 
+  const dockNumber =
+    dock.name.replace(
+      /\D/g,
+      ''
+    );
+
   const isOverdue = (
     eta: string
   ): boolean => {
@@ -276,14 +179,14 @@ useState(false);
       return false;
     }
 
-    const timeParts =
+    const parts =
       eta
         .split(':')
         .map(Number);
 
     if (
-      timeParts.length < 2 ||
-      timeParts.some(
+      parts.length < 2 ||
+      parts.some(
         Number.isNaN
       )
     ) {
@@ -294,8 +197,8 @@ useState(false);
       new Date(time);
 
     etaDate.setHours(
-      timeParts[0],
-      timeParts[1],
+      parts[0],
+      parts[1],
       0,
       0
     );
@@ -334,35 +237,44 @@ useState(false);
     );
   };
 
-  const selectedDriverName =
-    selectedTruck
-      ? getDisplayText(
-          selectedTruck
-            .driverName
-        )
-      : '';
+  const closeTruckDetails =
+    () => {
+      setSelectedTruck(null);
 
-  const selectedDriverPhone =
-    selectedTruck
-      ? getDisplayText(
-          selectedTruck
-            .telDriver
-        )
-      : '';
+      setShowOccupiedAlert(
+        false
+      );
+    };
+
+  const enterSelectedTruck =
+    () => {
+      if (!selectedTruck) {
+        return;
+      }
+
+      if (dock.currentTruck) {
+        setShowOccupiedAlert(
+          true
+        );
+
+        return;
+      }
+
+      if (onEnterDock) {
+        onEnterDock(
+          selectedTruck.id
+        );
+      }
+
+      closeTruckDetails();
+    };
 
   const selectedPhoneLink =
     selectedTruck
       ? createPhoneLink(
-          selectedTruck
-            .telDriver
+          selectedTruck.telDriver
         )
       : '';
-
-  const dockNumber =
-    dock.name.replace(
-      /\D/g,
-      ''
-    );
 
   return (
     <div
@@ -371,9 +283,7 @@ useState(false);
         config.container
       }
       onDrop={onDrop}
-      onDragOver={
-        onDragOver
-      }
+      onDragOver={onDragOver}
     >
       <div
         className={
@@ -400,15 +310,13 @@ useState(false);
         <div
           className={
             'rounded-lg p-2 border h-full flex flex-col ' +
-            config
-              .queueContainer
+            config.queueContainer
           }
         >
           <h3
             className={
               'text-[10px] font-bold uppercase mb-2 ' +
-              config
-                .queueHeader
+              config.queueHeader
             }
           >
             Waiting (
@@ -422,106 +330,86 @@ useState(false);
           {dock.waitingQueue
             .length > 0 ? (
             <div className="space-y-1.5 flex-1 overflow-y-auto">
-              <AnimatePresence mode="popLayout">
-                {displayQueue.map(
-                  (truck) => (
-                    <motion.div
-                      draggable
-                      onDragStart={(
-                        event
-                      ) => {
-                        if (
-                          onDragStart
-                        ) {
-                          onDragStart(
-                            event as
-                              unknown as
-                              React.DragEvent,
-                            truck.id
-                          );
+              {displayQueue.map(
+                (truck) => (
+                  <div
+                    draggable
+                    onDragStart={(
+                      event
+                    ) => {
+                      if (
+                        onDragStart
+                      ) {
+                        onDragStart(
+                          event,
+                          truck.id
+                        );
+                      }
+                    }}
+                    key={truck.id}
+                    onClick={() => {
+                      setSelectedTruck(
+                        truck
+                      );
+
+                      setShowOccupiedAlert(
+                        false
+                      );
+                    }}
+                    className={
+                      'p-2 border rounded shadow-sm flex justify-between items-center cursor-pointer transition-colors hover:opacity-80 gap-1.5 ' +
+                      getQueueStyle(
+                        truck
+                      )
+                    }
+                  >
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <div
+                        className={
+                          'flex gap-1.5 text-[11px] font-bold truncate ' +
+                          config.queueText
                         }
-                      }}
-                      layout
-                      layoutId={
-                        'truck-' +
-                        truck.id
-                      }
-                      initial={{
-                        opacity: 0,
-                        scale: 0.9,
-                      }}
-                      animate={{
-                        opacity: 1,
-                        scale: 1,
-                      }}
-                      exit={{
-                        opacity: 0,
-                        scale: 0.9,
-                      }}
-                      key={
-                        truck.id
-                      }
-                      onClick={() =>
-                        openTruckDetails(
+                      >
+                        <span className="truncate">
+                          {
+                            truck.route
+                          }
+                        </span>
+
+                        <span className="shrink-0">
+                          {
+                            truck.eta
+                          }
+                        </span>
+                      </div>
+
+                      <div className="text-sm font-black text-slate-800 truncate">
+                        {
                           truck
-                        )
-                      }
+                            .licensePlate
+                        }
+                      </div>
+                    </div>
+
+                    <div
                       className={
-                        'p-2 border rounded shadow-sm flex justify-between items-center cursor-pointer transition-colors hover:opacity-80 gap-1.5 ' +
-                        getQueueStyle(
-                          truck
+                        'shrink-0 p-1.5 rounded-full border flex items-center justify-center ' +
+                        (
+                          calledTrucks[
+                            truck.id
+                          ]
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-slate-50 text-slate-400 border-slate-200'
                         )
                       }
                     >
-                      <div className="min-w-0 flex-1 overflow-hidden">
-                        <div
-                          className={
-                            'flex gap-1.5 text-[11px] font-bold truncate ' +
-                            config
-                              .queueText
-                          }
-                        >
-                          <span className="truncate">
-                            {
-                              truck.route
-                            }
-                          </span>
-
-                          <span className="shrink-0">
-                            {
-                              truck.eta
-                            }
-                          </span>
-                        </div>
-
-                        <div className="text-sm font-black text-slate-800 truncate">
-                          {
-                            truck
-                              .licensePlate
-                          }
-                        </div>
-                      </div>
-
-                      <div
-                        className={
-                          'shrink-0 p-1.5 rounded-full border transition-colors flex items-center justify-center ' +
-                          (
-                            calledTrucks[
-                              truck.id
-                            ]
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : 'bg-slate-50 text-slate-400 border-slate-200'
-                          )
-                        }
-                      >
-                        <Phone
-                          size={14}
-                        />
-                      </div>
-                    </motion.div>
-                  )
-                )}
-              </AnimatePresence>
+                      <Phone
+                        size={14}
+                      />
+                    </div>
+                  </div>
+                )
+              )}
 
               {remainingQueue >
                 0 && (
@@ -545,182 +433,149 @@ useState(false);
       <div className="w-full h-3 bg-slate-100 border-y-2 border-slate-200 shrink-0" />
 
       <div className="h-[220px] p-2 shrink-0 flex flex-col">
-        <AnimatePresence mode="wait">
-          {dock.currentTruck ? (
-            <motion.div
-              layoutId={
-                'truck-' +
+        {dock.currentTruck ? (
+          <div
+            className={
+              'flex-1 rounded-lg p-3 flex flex-col relative ' +
+              (
+                dock.status ===
+                'delayed'
+                  ? 'bg-rose-50 border-2 border-rose-200'
+                  : 'bg-white border border-slate-200'
+              )
+            }
+          >
+            <div className="mb-1 flex justify-between items-start">
+              <p
+                className={
+                  'text-xs font-bold ' +
+                  (
+                    dock.status ===
+                    'delayed'
+                      ? 'text-rose-600'
+                      : 'text-amber-600'
+                  )
+                }
+              >
+                Route:{' '}
+                {
+                  dock.currentTruck
+                    .route
+                }
+              </p>
+
+              {dock.status ===
+                'delayed' && (
+                <span className="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-rose-200">
+                  EXCEEDED
+                </span>
+              )}
+            </div>
+
+            <h2 className="text-2xl font-black leading-none text-slate-800">
+              {
                 dock.currentTruck
-                  .id
+                  .licensePlate
               }
-              initial={{
-                opacity: 0,
-                y: -20,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              exit={{
-                opacity: 0,
-                scale: 0.9,
-              }}
-              className={
-                'flex-1 rounded-lg p-3 flex flex-col relative ' +
-                (
-                  dock.status ===
-                  'delayed'
-                    ? 'bg-rose-50 border-2 border-rose-200'
-                    : 'bg-white border border-slate-200'
-                )
-              }
-            >
-              <div className="mb-1 flex justify-between items-start">
-                <p
+            </h2>
+
+            <div className="mt-3 space-y-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-400">
+                  Driver
+                </span>
+
+                <span className="font-bold text-slate-700 truncate max-w-[100px]">
+                  {
+                    dock.currentTruck
+                      .driver
+                  }
+                </span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="text-slate-400">
+                  Transport
+                </span>
+
+                <span className="font-bold text-slate-700 truncate max-w-[100px]">
+                  {
+                    dock.currentTruck
+                      .transportCo
+                  }
+                </span>
+              </div>
+
+              <div className="flex justify-between border-t border-slate-100 pt-1">
+                <span className="text-slate-400">
+                  Arrival
+                </span>
+
+                <span className="font-bold text-slate-700">
+                  {
+                    dock.currentTruck
+                      .entryTime
+                  }
+                </span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="text-slate-400">
+                  Duration
+                </span>
+
+                <span className="font-black text-amber-600">
+                  {
+                    dock.currentTruck
+                      .elapsedTime
+                  }
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-auto pt-2">
+              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div
                   className={
-                    'text-xs font-bold ' +
                     (
                       dock.status ===
                       'delayed'
-                        ? 'text-rose-600'
-                        : 'text-amber-600'
-                    )
+                        ? 'bg-rose-500'
+                        : 'bg-amber-500'
+                    ) +
+                    ' h-full transition-all duration-500'
                   }
-                >
-                  Route:{' '}
-                  {
-                    dock.currentTruck
-                      .route
-                  }
-                </p>
-
-                {dock.status ===
-                  'delayed' && (
-                  <span className="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-rose-200">
-                    EXCEEDED
-                  </span>
-                )}
+                  style={{
+                    width:
+                      dock.currentTruck
+                        .progress +
+                      '%',
+                  }}
+                />
               </div>
 
-              <h2 className="text-2xl font-black leading-none text-slate-800">
+              <p className="text-right text-[10px] font-bold mt-1 text-amber-600 uppercase">
                 {
                   dock.currentTruck
-                    .licensePlate
+                    .progress
                 }
-              </h2>
-
-              <div className="mt-3 space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">
-                    Driver
-                  </span>
-
-                  <span className="font-bold text-slate-700 truncate max-w-[100px]">
-                    {
-                      dock.currentTruck
-                        .driver
-                    }
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-slate-400">
-                    Transport
-                  </span>
-
-                  <span className="font-bold text-slate-700 truncate max-w-[100px]">
-                    {
-                      dock.currentTruck
-                        .transportCo
-                    }
-                  </span>
-                </div>
-
-                <div className="flex justify-between border-t border-slate-100 pt-1">
-                  <span className="text-slate-400">
-                    Arrival
-                  </span>
-
-                  <span className="font-bold text-slate-700">
-                    {
-                      dock.currentTruck
-                        .entryTime
-                    }
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-slate-400">
-                    Duration
-                  </span>
-
-                  <span className="font-black text-amber-600">
-                    {
-                      dock.currentTruck
-                        .elapsedTime
-                    }
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-auto pt-2">
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                  <div
-                    className={
-                      (
-                        dock.status ===
-                        'delayed'
-                          ? 'bg-rose-500'
-                          : 'bg-amber-500'
-                      ) +
-                      ' h-full transition-all duration-500'
-                    }
-                    style={{
-                      width:
-                        dock.currentTruck
-                          .progress +
-                        '%',
-                    }}
-                  />
-                </div>
-
-                <p className="text-right text-[10px] font-bold mt-1 text-amber-600 uppercase">
-                  {
-                    dock.currentTruck
-                      .progress
-                  }
-                  % Progress
-                </p>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="idle"
-              initial={{
-                opacity: 0,
-              }}
-              animate={{
-                opacity: 1,
-              }}
-              exit={{
-                opacity: 0,
-              }}
-              className="flex-1 border border-slate-200 rounded-lg p-3 flex flex-col bg-white opacity-60"
-            >
-              <p className="text-lg font-black text-slate-300 flex items-center justify-center h-full">
-                IDLE
+                % Progress
               </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 border border-slate-200 rounded-lg p-3 flex flex-col bg-white opacity-60">
+            <p className="text-lg font-black text-slate-300 flex items-center justify-center h-full">
+              IDLE
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="p-2 border-t border-slate-200 shrink-0 bg-white">
         <button
           type="button"
-          onClick={
-            onFinish
-          }
+          onClick={onFinish}
           disabled={
             !dock.currentTruck
           }
@@ -741,8 +596,7 @@ useState(false);
         </button>
       </div>
 
-      {mounted &&
-        selectedTruck &&
+      {selectedTruck &&
         createPortal(
           <div className="fixed inset-0 z-[100] bg-slate-900/50 flex items-center justify-center p-4 backdrop-blur-sm">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden border border-slate-200">
@@ -811,9 +665,10 @@ useState(false);
                     </span>
 
                     <span className="font-bold text-slate-800 text-right">
-                      {
-                        selectedDriverName
-                      }
+                      {getDisplayText(
+                        selectedTruck
+                          .driverName
+                      )}
                     </span>
                   </div>
 
@@ -828,115 +683,5 @@ useState(false);
                       />
 
                       <span>
-                        {
-                          selectedDriverPhone
-                        }
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <AnimatePresence>
-                  {showOccupiedAlert && (
-                    <motion.div
-                      initial={{
-                        opacity: 0,
-                        height: 0,
-                      }}
-                      animate={{
-                        opacity: 1,
-                        height:
-                          'auto',
-                      }}
-                      exit={{
-                        opacity: 0,
-                        height: 0,
-                      }}
-                      className="overflow-hidden"
-                    >
-                      <div className="bg-amber-50 border border-amber-200 text-amber-700 p-3 rounded-lg flex items-center gap-2 text-sm font-bold">
-                        <AlertCircle
-                          size={18}
-                          className="shrink-0"
-                        />
-
-                        ช่องลงงานไม่ว่าง
-                        กรุณากดลงงานเรียบร้อยก่อน
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div className="grid grid-cols-2 gap-3 mt-6">
-                  {calledTrucks[
-                    selectedTruck.id
-                  ] ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={
-                          cancelCalledTruck
-                        }
-                        className="w-full bg-rose-500 border-2 border-rose-500 text-white font-bold py-3 rounded-lg hover:bg-rose-600 hover:border-rose-600 transition-colors shadow-sm"
-                      >
-                        ยกเลิกยืนยันโทร
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={
-                          enterSelectedTruck
-                        }
-                        className="w-full bg-blue-600 border-2 border-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 hover:border-blue-700 transition-colors shadow-sm flex items-center justify-center gap-1.5"
-                      >
-                        <PlayCircle
-                          size={18}
-                        />
-
-                        เข้าช่อง
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      {selectedPhoneLink ? (
-                        {
-                          <Phone
-                            size={18}
-                          />
-
-                          โทรออก
-                        </a>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled
-                          className="w-full bg-slate-100 border-2 border-slate-200 text-slate-400 font-bold py-3 rounded-lg cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                          <Phone
-                            size={18}
-                          />
-
-                          ไม่มีเบอร์โทร
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={
-                          confirmCalledTruck
-                        }
-                        className="w-full bg-blue-600 border-2 border-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 hover:border-blue-700 transition-colors shadow-sm"
-                      >
-                        ยืนยันโทรเรียกแล้ว
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
-    </div>
-  );
-}
+                        {getDisplayText(
+         
