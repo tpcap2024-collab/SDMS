@@ -107,19 +107,26 @@ function parseApiTime(
     return Date.now();
   }
 
-  const parsed =
+  const parsedTime =
     new Date(
-      value.replace(' ', 'T')
+      value.replace(
+        ' ',
+        'T'
+      )
     ).getTime();
 
-  if (Number.isNaN(parsed)) {
+  if (
+    Number.isNaN(
+      parsedTime
+    )
+  ) {
     return Date.now();
   }
 
-  return parsed;
+  return parsedTime;
 }
 
-function formatClock(
+function formatTime(
   value: string
 ): string {
   if (!value) {
@@ -134,20 +141,23 @@ function formatClock(
     return value;
   }
 
-  const parsed =
+  const parsedDate =
     new Date(
-      value.replace(' ', 'T')
+      value.replace(
+        ' ',
+        'T'
+      )
     );
 
   if (
     Number.isNaN(
-      parsed.getTime()
+      parsedDate.getTime()
     )
   ) {
     return value;
   }
 
-  return parsed
+  return parsedDate
     .toLocaleTimeString(
       'th-TH',
       {
@@ -158,52 +168,64 @@ function formatClock(
     );
 }
 
-function elapsedFrom(
+function calculateElapsed(
   startTime: number
 ) {
-  const totalSeconds =
+  const elapsedMilliseconds =
+    Math.max(
+      0,
+      Date.now() -
+        startTime
+    );
+
+  const elapsedSeconds =
     Math.floor(
-      Math.max(
-        0,
-        Date.now() -
-          startTime
-      ) / 1000
+      elapsedMilliseconds /
+        1000
     );
 
   const elapsedMinutes =
     Math.floor(
-      totalSeconds / 60
+      elapsedSeconds /
+        60
     );
 
-  const hours =
+  const elapsedHours =
     Math.floor(
-      elapsedMinutes / 60
+      elapsedMinutes /
+        60
     );
 
-  const minutes =
+  const displayMinutes =
     elapsedMinutes % 60;
 
-  const seconds =
-    totalSeconds % 60;
+  const displaySeconds =
+    elapsedSeconds % 60;
 
   return {
     elapsedMinutes,
     elapsedTime: [
-      hours,
-      minutes,
-      seconds,
+      elapsedHours,
+      displayMinutes,
+      displaySeconds,
     ]
-      .map((value) =>
-        String(value)
-          .padStart(2, '0')
+      .map(
+        (value) =>
+          String(value)
+            .padStart(
+              2,
+              '0'
+            )
       )
       .join(':'),
-    progress: Math.min(
-      100,
-      Math.floor(
-        elapsedMinutes / 0.4
-      )
-    ),
+    progress:
+      Math.min(
+        100,
+        Math.floor(
+          elapsedMinutes /
+            0.4
+        )
+      ),
   };
 }
 
@@ -213,13 +235,14 @@ function createEmptyDocks():
     (dock) => ({
       ...dock,
       status: 'empty',
-      currentTruck: null,
+      currentTruck:
+        null,
       waitingQueue: [],
     })
   );
 }
 
-function planToWaitingTruck(
+function createWaitingTruck(
   plan: SmartDockPlan
 ): WaitingTruck {
   return {
@@ -227,13 +250,16 @@ function planToWaitingTruck(
     route:
       plan.route || '-',
     licensePlate:
-      plan.truckName || '-',
+      plan.truckName ||
+      '-',
     eta:
       plan.planEta || '',
     driverName:
-      plan.driverName || '',
+      plan.driverName ||
+      '',
     telDriver:
-      plan.telDriver || '',
+      plan.telDriver ||
+      '',
     company:
       plan.company || '',
     project:
@@ -250,96 +276,105 @@ function convertPlansToDocks(
   const nextDocks =
     createEmptyDocks();
 
-  plans.forEach((plan) => {
-    const dockIndex =
-      DOCK_INDEX_BY_CODE[
-        plan.dock
-      ];
+  plans.forEach(
+    (plan) => {
+      const dockIndex =
+        DOCK_INDEX_BY_CODE[
+          plan.dock
+        ];
 
-    if (
-      dockIndex ===
-        undefined ||
-      plan.status ===
-        'COMPLETED'
-    ) {
-      return;
-    }
+      if (
+        dockIndex ===
+          undefined ||
+        plan.status ===
+          'COMPLETED'
+      ) {
+        return;
+      }
 
-    const selectedDock =
-      nextDocks[dockIndex];
+      const dock =
+        nextDocks[
+          dockIndex
+        ];
 
-    if (
-      plan.status ===
-        'IN_PROGRESS' &&
-      !selectedDock
-        .currentTruck
-    ) {
-      const startTime =
-        parseApiTime(
-          plan.timeIn
-        );
-
-      const elapsed =
-        elapsedFrom(
-          startTime
-        );
-
-      selectedDock.status =
-        elapsed
-          .elapsedMinutes >= 40
-          ? 'delayed'
-          : 'unloading';
-
-      selectedDock
-        .currentTruck = {
-        id: plan.codeRun,
-        route:
-          plan.route || '-',
-        licensePlate:
-          plan.truckName ||
-          '-',
-        driver:
-          plan.driverName ||
-          'ไม่มีข้อมูล',
-        telDriver:
-          plan.telDriver || '',
-        transportCo:
-          plan.company ||
-          'ไม่มีข้อมูล',
-        entryTime:
-          formatClock(
+      if (
+        plan.status ===
+          'IN_PROGRESS' &&
+        !dock.currentTruck
+      ) {
+        const startTime =
+          parseApiTime(
             plan.timeIn
-          ),
-        elapsedTime:
-          elapsed.elapsedTime,
-        progress:
-          elapsed.progress,
-        startTime,
-      };
+          );
 
-      return;
+        const elapsed =
+          calculateElapsed(
+            startTime
+          );
+
+        dock.status =
+          elapsed
+            .elapsedMinutes >=
+          40
+            ? 'delayed'
+            : 'unloading';
+
+        dock.currentTruck = {
+          id:
+            plan.codeRun,
+          route:
+            plan.route ||
+            '-',
+          licensePlate:
+            plan.truckName ||
+            '-',
+          driver:
+            plan.driverName ||
+            'ไม่มีข้อมูล',
+          telDriver:
+            plan.telDriver ||
+            '',
+          transportCo:
+            plan.company ||
+            'ไม่มีข้อมูล',
+          entryTime:
+            formatTime(
+              plan.timeIn
+            ),
+          elapsedTime:
+            elapsed
+              .elapsedTime,
+          progress:
+            elapsed
+              .progress,
+          startTime,
+        };
+
+        return;
+      }
+
+      dock.waitingQueue
+        .push(
+          createWaitingTruck(
+            plan
+          )
+        );
     }
-
-    selectedDock
-      .waitingQueue.push(
-        planToWaitingTruck(
-          plan
-        )
-      );
-  });
+  );
 
   nextDocks.forEach(
     (dock) => {
-      dock.waitingQueue.sort(
-        (
-          firstTruck,
-          secondTruck
-        ) =>
-          firstTruck.eta
-            .localeCompare(
-              secondTruck.eta
-            )
-      );
+      dock.waitingQueue
+        .sort(
+          (
+            first,
+            second
+          ) =>
+            first.eta
+              .localeCompare(
+                second.eta
+              )
+        );
     }
   );
 
@@ -361,9 +396,11 @@ function cloneDocks(
           : null,
       waitingQueue:
         dock.waitingQueue
-          .map((truck) => ({
-            ...truck,
-          })),
+          .map(
+            (truck) => ({
+              ...truck,
+            })
+          ),
     })
   );
 }
@@ -412,10 +449,29 @@ export default function App() {
     Date | null
   >(null);
 
-  const pendingRef =
+  const pendingCodeRunsRef =
     useRef(
       new Set<string>()
     );
+
+  const docksRef =
+    useRef<
+      DockData[]
+    >(
+      createEmptyDocks()
+    );
+
+  const plansRef =
+    useRef<
+      SmartDockPlan[]
+    >([]);
+
+  const reconcileTimerRef =
+    useRef<
+      ReturnType<
+        typeof setTimeout
+      > | null
+    >(null);
 
   const selectedDate =
     useMemo(
@@ -423,6 +479,16 @@ export default function App() {
         getBangkokDate(),
       []
     );
+
+  useEffect(() => {
+    docksRef.current =
+      docks;
+  }, [docks]);
+
+  useEffect(() => {
+    plansRef.current =
+      plans;
+  }, [plans]);
 
   const fetchDockData =
     useCallback(
@@ -437,7 +503,7 @@ export default function App() {
 
         if (
           !force &&
-          pendingRef
+          pendingCodeRunsRef
             .current
             .size > 0
         ) {
@@ -456,6 +522,7 @@ export default function App() {
                   )
               ),
               {
+                method: 'GET',
                 headers: {
                   Accept:
                     'application/json',
@@ -530,6 +597,27 @@ export default function App() {
       ]
     );
 
+  const scheduleReconcile =
+    useCallback(() => {
+      if (
+        reconcileTimerRef
+          .current
+      ) {
+        clearTimeout(
+          reconcileTimerRef
+            .current
+        );
+      }
+
+      reconcileTimerRef
+        .current =
+        setTimeout(() => {
+          void fetchDockData(
+            true
+          );
+        }, 1000);
+    }, [fetchDockData]);
+
   useEffect(() => {
     if (
       !isAuthenticated
@@ -537,19 +625,28 @@ export default function App() {
       return;
     }
 
-    fetchDockData();
+    void fetchDockData();
 
     const refreshTimer =
-      setInterval(
-        () =>
-          fetchDockData(),
-        30000
-      );
+      setInterval(() => {
+        void fetchDockData();
+      }, 30000);
 
-    return () =>
+    return () => {
       clearInterval(
         refreshTimer
       );
+
+      if (
+        reconcileTimerRef
+          .current
+      ) {
+        clearTimeout(
+          reconcileTimerRef
+            .current
+        );
+      }
+    };
   }, [
     fetchDockData,
     isAuthenticated,
@@ -569,9 +666,11 @@ export default function App() {
         );
 
         setDocks(
-          (previous) =>
-            previous.map(
-              (dock) => {
+          (
+            previousDocks
+          ) =>
+            previousDocks
+              .map((dock) => {
                 if (
                   !dock
                     .currentTruck
@@ -580,7 +679,7 @@ export default function App() {
                 }
 
                 const elapsed =
-                  elapsedFrom(
+                  calculateElapsed(
                     dock
                       .currentTruck
                       .startTime
@@ -605,15 +704,15 @@ export default function App() {
                         .progress,
                   },
                 };
-              }
-            )
+              })
         );
       }, 1000);
 
-    return () =>
+    return () => {
       clearInterval(
         clockTimer
       );
+    };
   }, [isAuthenticated]);
 
   const handleEnterDock =
@@ -621,23 +720,33 @@ export default function App() {
       dockId: string,
       truckId: string
     ) => {
-      const dockIndex =
-        docks.findIndex(
-          (dock) =>
-            dock.id === dockId
-        );
-
       if (
-        dockIndex < 0 ||
-        pendingRef
+        pendingCodeRunsRef
           .current
           .has(truckId)
       ) {
         return;
       }
 
+      const currentDocks =
+        docksRef.current;
+
+      const dockIndex =
+        currentDocks
+          .findIndex(
+            (dock) =>
+              dock.id ===
+              dockId
+          );
+
+      if (dockIndex < 0) {
+        return;
+      }
+
       const selectedDock =
-        docks[dockIndex];
+        currentDocks[
+          dockIndex
+        ];
 
       if (
         selectedDock
@@ -660,25 +769,41 @@ export default function App() {
           );
 
       if (!selectedTruck) {
+        setErrorMessage(
+          'ไม่พบข้อมูลรถในคิว'
+        );
+
         return;
       }
 
-      const backup =
-        cloneDocks(docks);
+      const dockBackup =
+        cloneDocks(
+          currentDocks
+        );
+
+      const planBackup =
+        plansRef.current
+          .map(
+            (plan) => ({
+              ...plan,
+            })
+          );
 
       const startTime =
         Date.now();
 
-      pendingRef
+      pendingCodeRunsRef
         .current
         .add(truckId);
 
       setErrorMessage('');
 
       setDocks(
-        (previous) =>
-          previous.map(
-            (dock) => {
+        (
+          previousDocks
+        ) =>
+          previousDocks
+            .map((dock) => {
               if (
                 dock.id !==
                 dockId
@@ -692,9 +817,11 @@ export default function App() {
                   'unloading',
                 currentTruck: {
                   id:
-                    selectedTruck.id,
+                    selectedTruck
+                      .id,
                   route:
-                    selectedTruck.route,
+                    selectedTruck
+                      .route,
                   licensePlate:
                     selectedTruck
                       .licensePlate,
@@ -738,14 +865,15 @@ export default function App() {
                         truckId
                     ),
               };
-            }
-          )
+            })
       );
 
       setPlans(
-        (previous) =>
-          previous.map(
-            (plan) =>
+        (
+          previousPlans
+        ) =>
+          previousPlans
+            .map((plan) =>
               plan.codeRun ===
               truckId
                 ? {
@@ -759,7 +887,7 @@ export default function App() {
                         .toISOString(),
                   }
                 : plan
-          )
+            )
       );
 
       try {
@@ -777,14 +905,16 @@ export default function App() {
                   'application/json',
               },
               body:
-                JSON.stringify({
-                  codeRun:
-                    truckId,
-                  dock:
-                    DOCK_CODES[
-                      dockIndex
-                    ],
-                }),
+                JSON.stringify(
+                  {
+                    codeRun:
+                      truckId,
+                    dock:
+                      DOCK_CODES[
+                        dockIndex
+                      ],
+                  }
+                ),
             }
           );
 
@@ -809,22 +939,12 @@ export default function App() {
       } catch (
         error: unknown
       ) {
-        setDocks(backup);
+        setDocks(
+          dockBackup
+        );
 
         setPlans(
-          (previous) =>
-            previous.map(
-              (plan) =>
-                plan.codeRun ===
-                truckId
-                  ? {
-                      ...plan,
-                      status:
-                        'WAITING',
-                      timeIn: '',
-                    }
-                  : plan
-            )
+          planBackup
         );
 
         const message =
@@ -837,13 +957,11 @@ export default function App() {
           message
         );
       } finally {
-        pendingRef
+        pendingCodeRunsRef
           .current
           .delete(truckId);
 
-        void fetchDockData(
-          true
-        );
+        scheduleReconcile();
       }
     };
 
@@ -851,23 +969,32 @@ export default function App() {
     async (
       dockId: string
     ) => {
+      const currentDocks =
+        docksRef.current;
+
       const dockIndex =
-        docks.findIndex(
-          (dock) =>
-            dock.id === dockId
-        );
+        currentDocks
+          .findIndex(
+            (dock) =>
+              dock.id ===
+              dockId
+          );
 
       if (dockIndex < 0) {
         return;
       }
 
       const currentTruck =
-        docks[dockIndex]
-          .currentTruck;
+        currentDocks[
+          dockIndex
+        ].currentTruck;
+
+      if (!currentTruck) {
+        return;
+      }
 
       if (
-        !currentTruck ||
-        pendingRef
+        pendingCodeRunsRef
           .current
           .has(
             currentTruck.id
@@ -876,10 +1003,20 @@ export default function App() {
         return;
       }
 
-      const backup =
-        cloneDocks(docks);
+      const dockBackup =
+        cloneDocks(
+          currentDocks
+        );
 
-      pendingRef
+      const planBackup =
+        plansRef.current
+          .map(
+            (plan) => ({
+              ...plan,
+            })
+          );
+
+      pendingCodeRunsRef
         .current
         .add(
           currentTruck.id
@@ -888,9 +1025,11 @@ export default function App() {
       setErrorMessage('');
 
       setDocks(
-        (previous) =>
-          previous.map(
-            (dock) =>
+        (
+          previousDocks
+        ) =>
+          previousDocks
+            .map((dock) =>
               dock.id ===
               dockId
                 ? {
@@ -901,22 +1040,27 @@ export default function App() {
                       null,
                   }
                 : dock
-          )
+            )
       );
 
       setPlans(
-        (previous) =>
-          previous.map(
-            (plan) =>
+        (
+          previousPlans
+        ) =>
+          previousPlans
+            .map((plan) =>
               plan.codeRun ===
               currentTruck.id
                 ? {
                     ...plan,
                     status:
                       'COMPLETED',
+                    timeOut:
+                      new Date()
+                        .toISOString(),
                   }
                 : plan
-          )
+            )
       );
 
       try {
@@ -934,10 +1078,13 @@ export default function App() {
                   'application/json',
               },
               body:
-                JSON.stringify({
-                  codeRun:
-                    currentTruck.id,
-                }),
+                JSON.stringify(
+                  {
+                    codeRun:
+                      currentTruck
+                        .id,
+                  }
+                ),
             }
           );
 
@@ -962,21 +1109,12 @@ export default function App() {
       } catch (
         error: unknown
       ) {
-        setDocks(backup);
+        setDocks(
+          dockBackup
+        );
 
         setPlans(
-          (previous) =>
-            previous.map(
-              (plan) =>
-                plan.codeRun ===
-                currentTruck.id
-                  ? {
-                      ...plan,
-                      status:
-                        'IN_PROGRESS',
-                    }
-                  : plan
-            )
+          planBackup
         );
 
         const message =
@@ -989,15 +1127,13 @@ export default function App() {
           message
         );
       } finally {
-        pendingRef
+        pendingCodeRunsRef
           .current
           .delete(
             currentTruck.id
           );
 
-        void fetchDockData(
-          true
-        );
+        scheduleReconcile();
       }
     };
 
@@ -1025,13 +1161,15 @@ export default function App() {
     event.preventDefault();
 
     try {
-      const value =
+      const transferredData =
         event.dataTransfer
           .getData(
             'application/json'
           );
 
-      if (!value) {
+      if (
+        !transferredData
+      ) {
         return;
       }
 
@@ -1039,7 +1177,7 @@ export default function App() {
         truckId,
         sourceDockId,
       } = JSON.parse(
-        value
+        transferredData
       ) as {
         truckId: string;
         sourceDockId: string;
@@ -1053,36 +1191,42 @@ export default function App() {
       }
 
       setDocks(
-        (previous) => {
-          const next =
+        (
+          previousDocks
+        ) => {
+          const nextDocks =
             cloneDocks(
-              previous
+              previousDocks
             );
 
-          const sourceIndex =
-            next.findIndex(
-              (dock) =>
-                dock.id ===
-                sourceDockId
-            );
+          const sourceDockIndex =
+            nextDocks
+              .findIndex(
+                (dock) =>
+                  dock.id ===
+                  sourceDockId
+              );
 
-          const targetIndex =
-            next.findIndex(
-              (dock) =>
-                dock.id ===
-                targetDockId
-            );
+          const targetDockIndex =
+            nextDocks
+              .findIndex(
+                (dock) =>
+                  dock.id ===
+                  targetDockId
+              );
 
           if (
-            sourceIndex < 0 ||
-            targetIndex < 0
+            sourceDockIndex <
+              0 ||
+            targetDockIndex <
+              0
           ) {
-            return previous;
+            return previousDocks;
           }
 
           const truckIndex =
-            next[
-              sourceIndex
+            nextDocks[
+              sourceDockIndex
             ].waitingQueue
               .findIndex(
                 (truck) =>
@@ -1093,28 +1237,28 @@ export default function App() {
           if (
             truckIndex < 0
           ) {
-            return previous;
+            return previousDocks;
           }
 
-          const moved =
-            next[
-              sourceIndex
+          const movedTruck =
+            nextDocks[
+              sourceDockIndex
             ].waitingQueue
               .splice(
                 truckIndex,
                 1
               )[0];
 
-          next[
-            targetIndex
+          nextDocks[
+            targetDockIndex
           ].waitingQueue
             .push({
-              ...moved,
+              ...movedTruck,
               isMoved: true,
             });
 
-          next[
-            targetIndex
+          nextDocks[
+            targetDockIndex
           ].waitingQueue
             .sort(
               (
@@ -1127,7 +1271,7 @@ export default function App() {
                   )
             );
 
-          return next;
+          return nextDocks;
         }
       );
     } catch (error) {
