@@ -903,12 +903,14 @@ export default function App() {
                   'application/json',
                 'Content-Type':
                   'application/json',
-              },
+              },    
               body:
                 JSON.stringify(
                   {
                     codeRun:
                       truckId,
+                   route:
+                      selectedTruck.route, 
                     dock:
                       DOCK_CODES[
                         dockIndex
