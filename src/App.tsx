@@ -1527,6 +1527,68 @@ export default function App() {
     }
   };
 
+  const handleMoveTruckBySelection = (
+    truckId: string,
+    targetDockCode: string
+  ) => {
+    if (
+      !truckId ||
+      !targetDockCode ||
+      pendingOperationsRef.current.has(truckId)
+    ) {
+      return;
+    }
+
+    const sourceDockIndex = docksRef.current.findIndex(
+      (dock) =>
+        dock.waitingQueue.some(
+          (truck) => truck.id === truckId
+        )
+    );
+    const targetDockIndex =
+      DOCK_INDEX_BY_CODE[targetDockCode];
+
+    if (
+      sourceDockIndex < 0 ||
+      targetDockIndex === undefined
+    ) {
+      setErrorMessage(
+        'ไม่พบข้อมูล Dock สำหรับโยกช่อง'
+      );
+      return;
+    }
+
+    const sourceDock = docksRef.current[sourceDockIndex];
+    const targetDock = docksRef.current[targetDockIndex];
+
+    if (
+      !sourceDock ||
+      !targetDock ||
+      sourceDock.id === targetDock.id
+    ) {
+      return;
+    }
+
+    const transferredData = JSON.stringify({
+      truckId,
+      sourceDockId: sourceDock.id,
+    });
+    const syntheticEvent = {
+      preventDefault: () => undefined,
+      dataTransfer: {
+        getData: (format: string) =>
+          format === 'application/json'
+            ? transferredData
+            : '',
+      },
+    } as unknown as React.DragEvent;
+
+    void handleDrop(
+      syntheticEvent,
+      targetDock.id
+    );
+  };
+
   const activeDocks = docks.filter(
     (dock) => dock.currentTruck !== null
   ).length;
@@ -1610,6 +1672,15 @@ export default function App() {
               event.dataTransfer.dropEffect = 'move';
             }}
             onPhoneCall={handlePhoneCall}
+            onMoveTruck={(
+              truckId,
+              targetDockCode
+            ) => {
+              handleMoveTruckBySelection(
+                truckId,
+                targetDockCode
+              );
+            }}
           />
         ))}
       </main>
