@@ -5,6 +5,17 @@ export type DockStatus =
   | 'preparing'
   | 'delayed';
 
+export type DockOperationType =
+  | 'START'
+  | 'COMPLETE';
+
+export type DockOperationStatus =
+  | 'idle'
+  | 'saving'
+  | 'confirming'
+  | 'success'
+  | 'error';
+
 export interface Truck {
   id: string;
   route: string;
@@ -31,12 +42,32 @@ export interface WaitingTruck {
   isMoved?: boolean;
 }
 
+export interface DockOperationState {
+  codeRun: string;
+  operation: DockOperationType;
+  status: DockOperationStatus;
+  message: string;
+  startedAt: number;
+}
+
+export interface PendingDockOperation {
+  codeRun: string;
+  operation: DockOperationType;
+  dockId: string;
+  dockCode: string;
+  route: string;
+  createdAt: number;
+  truck: WaitingTruck | null;
+  currentTruck: Truck | null;
+}
+
 export interface DockData {
   id: string;
   name: string;
   status: DockStatus;
   currentTruck: Truck | null;
   waitingQueue: WaitingTruck[];
+  operationState?: DockOperationState;
 }
 
 export interface KPIData {
@@ -47,3 +78,4 @@ export interface KPIData {
   delayedDocks: number;
   utilization: number;
 }
+`
