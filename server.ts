@@ -4,8 +4,16 @@ import { createServer as createViteServer } from "vite";
 
 type JsonObject = Record<string, unknown>;
 
-const SERVER_VERSION = "SDMS-SERVER-4";
+const SERVER_VERSION = "SDMS-SERVER-5";
 const REQUEST_TIMEOUT_MS = 30000;
+const ALLOWED_DOCKS = new Set([
+  "L1-1",
+  "L1-2",
+  "L1-3",
+  "L2-4",
+  "L2-5",
+  "L2-6",
+]);
 
 function getAppsScriptUrl(): string {
   const value = process.env.APPS_SCRIPT_URL;
@@ -23,6 +31,22 @@ function getErrorMessage(error: unknown): string {
   }
 
   return String(error || "Unknown error");
+}
+
+function normalizeDock(value: unknown): string {
+  return String(value || "").trim().toUpperCase();
+}
+
+function validateDock(dock: string, fieldName: string): string | null {
+  if (!dock) {
+    return fieldName + " is required";
+  }
+
+  if (!ALLOWED_DOCKS.has(dock)) {
+    return fieldName + " is not an allowed Smart Dock";
+  }
+
+  return null;
 }
 
 async function parseJsonResponse(
@@ -191,6 +215,7 @@ async function startServer() {
         "GET /api/smart-dock/plans",
         "POST /api/smart-dock/start",
         "POST /api/smart-dock/complete",
+        "POST /api/smart-dock/move",
       ],
       timestamp: new Date().toISOString(),
     });
@@ -259,9 +284,7 @@ async function startServer() {
         .trim()
         .toUpperCase();
       const route = String(req.body?.route || "").trim();
-      const dock = String(req.body?.dock || "")
-        .trim()
-        .toUpperCase();
+      const dock = normalizeDock(req.body?.dock);
 
       if (!codeRun) {
         return res.status(400).json({
@@ -277,10 +300,12 @@ async function startServer() {
         });
       }
 
-      if (!dock) {
+      const dockError = validateDock(dock, "dock");
+
+      if (dockError) {
         return res.status(400).json({
           success: false,
-          error: "dock is required",
+          error: dockError,
         });
       }
 
@@ -329,6 +354,72 @@ async function startServer() {
       return res.status(500).json({
         success: false,
         action: "completeSmartDock",
+        error: getErrorMessage(error),
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
+  app.post("/api/smart-dock/move", async (req, res) => {
+    try {
+      const codeRun = String(req.body?.codeRun || "")
+        .trim()
+        .toUpperCase();
+      const sourceDock = normalizeDock(req.body?.sourceDock);
+      const targetDock = normalizeDock(req.body?.targetDock);
+
+      if (!codeRun) {
+        return res.status(400).json({
+          success: false,
+          error: "codeRun is required",
+        });
+      }
+
+      const sourceDockError = validateDock(
+        sourceDock,
+        "sourceDock"
+      );
+
+      if (sourceDockError) {
+        return res.status(400).json({
+          success: false,
+          error: sourceDockError,
+        });
+      }
+
+      const targetDockError = validateDock(
+        targetDock,
+        "targetDock"
+      );
+
+      if (targetDockError) {
+        return res.status(400).json({
+          success: false,
+          error: targetDockError,
+        });
+      }
+
+      if (sourceDock === targetDock) {
+        return res.status(400).json({
+          success: false,
+          error: "sourceDock and targetDock must be different",
+        });
+      }
+
+      const result = await callAppsScriptPost({
+        action: "moveSmartDock",
+        codeRun: codeRun,
+        sourceDock: sourceDock,
+        targetDock: targetDock,
+      });
+
+      return res.status(200).json(result);
+    } catch (error: unknown) {
+      console.error("Move Smart Dock error:", error);
+
+      return res.status(500).json({
+        success: false,
+        action: "moveSmartDock",
         error: getErrorMessage(error),
         timestamp: new Date().toISOString(),
       });
