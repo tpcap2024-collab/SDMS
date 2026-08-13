@@ -7,7 +7,8 @@ export type DockStatus =
 
 export type DockOperationType =
   | 'START'
-  | 'COMPLETE';
+  | 'COMPLETE'
+  | 'MOVE';
 
 export type DockOperationStatus =
   | 'idle'
@@ -59,6 +60,10 @@ export interface PendingDockOperation {
   createdAt: number;
   truck: WaitingTruck | null;
   currentTruck: Truck | null;
+  sourceDockId?: string;
+  sourceDockCode?: string;
+  targetDockId?: string;
+  targetDockCode?: string;
 }
 
 export interface DockData {
@@ -78,4 +83,3 @@ export interface KPIData {
   delayedDocks: number;
   utilization: number;
 }
-`
