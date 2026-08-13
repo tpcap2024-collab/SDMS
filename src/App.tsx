@@ -771,34 +771,75 @@ export default function App() {
   }, [commitDocks, commitPlans, isAuthenticated]);
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (
-        document.visibilityState === 'visible' &&
-        waitingForPhoneReturnRef.current
-      ) {
-        waitingForPhoneReturnRef.current = false;
+    if (!isAuthenticated) {
+      setShowReturnFullscreen(false);
+      return;
+    }
 
-        if (
-          phoneWasFullscreenRef.current &&
-          !document.fullscreenElement
-        ) {
-          setShowReturnFullscreen(true);
-        }
+    const updateFullscreenGate = () => {
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
+
+      const isFullscreen = Boolean(
+        document.fullscreenElement
+      );
+
+      setShowReturnFullscreen(!isFullscreen);
+
+      if (waitingForPhoneReturnRef.current) {
+        waitingForPhoneReturnRef.current = false;
       }
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        window.setTimeout(updateFullscreenGate, 100);
+      }
+    };
+
+    const handleWindowFocus = () => {
+      window.setTimeout(updateFullscreenGate, 100);
+    };
+
+    document.addEventListener(
+      'fullscreenchange',
+      updateFullscreenGate
+    );
     document.addEventListener(
       'visibilitychange',
       handleVisibilityChange
     );
+    window.addEventListener(
+      'focus',
+      handleWindowFocus
+    );
+    window.addEventListener(
+      'pageshow',
+      handleWindowFocus
+    );
+
+    updateFullscreenGate();
 
     return () => {
+      document.removeEventListener(
+        'fullscreenchange',
+        updateFullscreenGate
+      );
       document.removeEventListener(
         'visibilitychange',
         handleVisibilityChange
       );
+      window.removeEventListener(
+        'focus',
+        handleWindowFocus
+      );
+      window.removeEventListener(
+        'pageshow',
+        handleWindowFocus
+      );
     };
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     return () => {
@@ -902,7 +943,10 @@ export default function App() {
       phoneWasFullscreenRef.current = false;
     } catch (error: unknown) {
       console.error('Return fullscreen error:', error);
-      setErrorMessage('ไม่สามารถกลับเข้า Full Screen ได้');
+      setShowReturnFullscreen(true);
+      setErrorMessage(
+        'ไม่สามารถเข้า Full Screen ได้ กรุณาแตะปุ่มอีกครั้ง'
+      );
     }
   };
 
