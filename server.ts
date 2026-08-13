@@ -5,7 +5,7 @@ import { createServer as createViteServer } from "vite";
 type JsonObject = Record<string, unknown>;
 
 const SERVER_VERSION = "SDMS-SERVER-5";
-const REQUEST_TIMEOUT_MS = 30000;
+const REQUEST_TIMEOUT_MS = 60000;
 
 const ALLOWED_DOCKS = new Set([
   "L1-1",
