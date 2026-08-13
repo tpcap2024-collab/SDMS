@@ -5,8 +5,10 @@ import React, {
 import {
   Bell,
   CalendarDays,
+  LogOut,
   Maximize2,
   Minimize2,
+  RefreshCw,
   Truck,
 } from 'lucide-react';
 import { KPIData } from '../types';
@@ -15,16 +17,22 @@ interface HeaderProps {
   time: Date;
   kpiData: KPIData;
   selectedDate: string;
+  isRefreshing: boolean;
   onDateChange: (
     date: string
   ) => void;
+  onRefresh: () => void;
+  onLogout: () => void;
 }
 
 export default function Header({
   time,
   kpiData,
   selectedDate,
+  isRefreshing,
   onDateChange,
+  onRefresh,
+  onLogout,
 }: HeaderProps) {
   const [
     isFullscreen,
@@ -37,15 +45,15 @@ export default function Header({
   ] = useState('');
 
   useEffect(() => {
-    const handleFullscreenChange =
-      () => {
-        setIsFullscreen(
-          Boolean(
-            document
-              .fullscreenElement
-          )
-        );
-      };
+    const handleFullscreenChange = () => {
+      setIsFullscreen(
+        Boolean(
+          document.fullscreenElement
+        )
+      );
+
+      setFullscreenError('');
+    };
 
     document.addEventListener(
       'fullscreenchange',
@@ -90,37 +98,29 @@ export default function Header({
     );
   };
 
-  const toggleFullscreen =
-    async () => {
-      setFullscreenError('');
+  const toggleFullscreen = async () => {
+    setFullscreenError('');
 
-      try {
-        if (
-          document
-            .fullscreenElement
-        ) {
-          await document
-            .exitFullscreen();
-
-          return;
-        }
-
-        await document
-          .documentElement
-          .requestFullscreen();
-      } catch (
-        error: unknown
-      ) {
-        console.error(
-          'Fullscreen error:',
-          error
-        );
-
-        setFullscreenError(
-          'อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับ Full Screen'
-        );
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        return;
       }
-    };
+
+      await document.documentElement.requestFullscreen({
+        navigationUI: 'hide',
+      });
+    } catch (error: unknown) {
+      console.error(
+        'Fullscreen error:',
+        error
+      );
+
+      setFullscreenError(
+        'อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับ Full Screen'
+      );
+    }
+  };
 
   return (
     <header className="relative h-20 bg-white border-b border-slate-300 flex items-center justify-between px-4 shrink-0 shadow-sm gap-3">
@@ -150,13 +150,9 @@ export default function Header({
           </p>
 
           <p className="text-lg font-bold text-slate-700">
-            {kpiData
-              .totalTrucks
+            {kpiData.totalTrucks
               .toString()
-              .padStart(
-                2,
-                '0'
-              )}
+              .padStart(2, '0')}
           </p>
         </div>
 
@@ -166,13 +162,9 @@ export default function Header({
           </p>
 
           <p className="text-lg font-bold text-amber-600">
-            {kpiData
-              .waitingTrucks
+            {kpiData.waitingTrucks
               .toString()
-              .padStart(
-                2,
-                '0'
-              )}
+              .padStart(2, '0')}
           </p>
         </div>
 
@@ -182,13 +174,9 @@ export default function Header({
           </p>
 
           <p className="text-lg font-bold text-emerald-600">
-            {kpiData
-              .activeDocks
+            {kpiData.activeDocks
               .toString()
-              .padStart(
-                2,
-                '0'
-              )}
+              .padStart(2, '0')}
           </p>
         </div>
 
@@ -198,13 +186,9 @@ export default function Header({
           </p>
 
           <p className="text-lg font-bold text-slate-400">
-            {kpiData
-              .emptyDocks
+            {kpiData.emptyDocks
               .toString()
-              .padStart(
-                2,
-                '0'
-              )}
+              .padStart(2, '0')}
           </p>
         </div>
 
@@ -214,13 +198,9 @@ export default function Header({
           </p>
 
           <p className="text-lg font-bold text-rose-600">
-            {kpiData
-              .delayedDocks
+            {kpiData.delayedDocks
               .toString()
-              .padStart(
-                2,
-                '0'
-              )}
+              .padStart(2, '0')}
           </p>
         </div>
 
@@ -230,11 +210,7 @@ export default function Header({
           </p>
 
           <p className="text-lg font-bold text-emerald-700">
-            {
-              kpiData
-                .utilization
-            }
-            %
+            {kpiData.utilization}%
           </p>
         </div>
       </div>
@@ -253,18 +229,19 @@ export default function Header({
 
             <input
               type="date"
-              value={
-                selectedDate
-              }
-              onChange={(
-                event
-              ) =>
+              value={selectedDate}
+              onChange={(event) =>
                 onDateChange(
-                  event.target
-                    .value
+                  event.target.value
                 )
               }
-              className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+              disabled={isRefreshing}
+              className={
+                'bg-transparent text-xs font-bold text-slate-700 outline-none ' +
+                (isRefreshing
+                  ? 'cursor-wait opacity-60'
+                  : 'cursor-pointer')
+              }
               aria-label="เลือกวันที่แผนงาน"
             />
           </div>
@@ -272,27 +249,48 @@ export default function Header({
 
         <div className="text-right hidden xl:block min-w-[150px]">
           <p className="text-[11px] font-bold text-slate-800 whitespace-nowrap">
-            {
-              formatDate(
-                time
-              )
-            }
+            {formatDate(time)}
           </p>
 
           <p className="text-base font-mono font-bold text-emerald-600">
-            {
-              formatTime(
-                time
-              )
-            }
+            {formatTime(time)}
           </p>
         </div>
 
         <button
           type="button"
-          onClick={
-            toggleFullscreen
+          onClick={onRefresh}
+          disabled={isRefreshing}
+          className={
+            'p-2.5 rounded-lg border transition-colors ' +
+            (isRefreshing
+              ? 'bg-blue-50 border-blue-200 text-blue-500 cursor-wait'
+              : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100')
           }
+          title={
+            isRefreshing
+              ? 'กำลังรีเฟรชข้อมูล'
+              : 'รีเฟรชข้อมูล'
+          }
+          aria-label={
+            isRefreshing
+              ? 'กำลังรีเฟรชข้อมูล'
+              : 'รีเฟรชข้อมูล'
+          }
+        >
+          <RefreshCw
+            size={20}
+            className={
+              isRefreshing
+                ? 'animate-spin'
+                : ''
+            }
+          />
+        </button>
+
+        <button
+          type="button"
+          onClick={toggleFullscreen}
           className="p-2.5 hover:bg-slate-100 rounded-lg text-slate-500 border border-slate-200 transition-colors"
           title={
             isFullscreen
@@ -306,13 +304,9 @@ export default function Header({
           }
         >
           {isFullscreen ? (
-            <Minimize2
-              size={20}
-            />
+            <Minimize2 size={20} />
           ) : (
-            <Maximize2
-              size={20}
-            />
+            <Maximize2 size={20} />
           )}
         </button>
 
@@ -320,10 +314,9 @@ export default function Header({
           type="button"
           className="p-2.5 hover:bg-slate-100 rounded-lg text-slate-400 relative transition-colors"
           aria-label="การแจ้งเตือน"
+          title="การแจ้งเตือน"
         >
-          <Bell
-            size={20}
-          />
+          <Bell size={20} />
 
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full" />
         </button>
@@ -333,6 +326,16 @@ export default function Header({
             OP
           </span>
         </div>
+
+        <button
+          type="button"
+          onClick={onLogout}
+          className="p-2.5 hover:bg-rose-50 rounded-lg text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 transition-colors"
+          title="ออกจากระบบ"
+          aria-label="ออกจากระบบ"
+        >
+          <LogOut size={20} />
+        </button>
       </div>
 
       {fullscreenError && (
