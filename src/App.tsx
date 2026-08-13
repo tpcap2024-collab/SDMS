@@ -59,6 +59,10 @@ type RuntimePendingOperation = PendingDockOperation & {
   errorMessage: string;
 };
 
+type StoredSession = {
+  expiresAt: number;
+};
+
 const API_BASE_URL = String(
   import.meta.env.VITE_API_URL || ''
 ).replace(/\/+$/, '');
@@ -77,6 +81,8 @@ const DOCK_INDEX_BY_CODE: Record<string, number> =
     DOCK_CODES.map((code, index) => [code, index])
   );
 
+const SESSION_STORAGE_KEY = 'sdms-session';
+const SESSION_DURATION_MS = 43200000;
 const CONFIRMATION_RETRY_MS = 3000;
 const CONFIRMATION_TIMEOUT_MS = 60000;
 const SUCCESS_BADGE_MS = 2500;
@@ -92,6 +98,44 @@ function getBangkokDate(): string {
 
 function getApiUrl(path: string): string {
   return API_BASE_URL ? API_BASE_URL + path : path;
+}
+
+function readStoredSession(): boolean {
+  try {
+    const storedValue = localStorage.getItem(
+      SESSION_STORAGE_KEY
+    );
+
+    if (!storedValue) {
+      return false;
+    }
+
+    const session = JSON.parse(storedValue) as StoredSession;
+
+    if (
+      !Number.isFinite(session.expiresAt) ||
+      session.expiresAt <= Date.now()
+    ) {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      return false;
+    }
+
+    return true;
+  } catch {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+    return false;
+  }
+}
+
+function saveSession(): void {
+  const session: StoredSession = {
+    expiresAt: Date.now() + SESSION_DURATION_MS,
+  };
+
+  localStorage.setItem(
+    SESSION_STORAGE_KEY,
+    JSON.stringify(session)
+  );
 }
 
 function parseApiTime(value: string): number {
@@ -133,28 +177,18 @@ function formatTime(value: string): string {
 }
 
 function calculateElapsed(startTime: number) {
-  const elapsedMilliseconds = Math.max(
-    0,
-    Date.now() - startTime
-  );
   const elapsedSeconds = Math.floor(
-    elapsedMilliseconds / 1000
+    Math.max(0, Date.now() - startTime) / 1000
   );
-  const elapsedMinutes = Math.floor(
-    elapsedSeconds / 60
-  );
-  const elapsedHours = Math.floor(
-    elapsedMinutes / 60
-  );
-  const displayMinutes = elapsedMinutes % 60;
-  const displaySeconds = elapsedSeconds % 60;
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
 
   return {
     elapsedMinutes,
     elapsedTime: [
       elapsedHours,
-      displayMinutes,
-      displaySeconds,
+      elapsedMinutes % 60,
+      elapsedSeconds % 60,
     ]
       .map((value) => String(value).padStart(2, '0'))
       .join(':'),
@@ -193,11 +227,11 @@ function createWaitingTruck(
 }
 
 function convertPlansToDocks(
-  plans: SmartDockPlan[]
+  planRows: SmartDockPlan[]
 ): DockData[] {
   const nextDocks = createEmptyDocks();
 
-  plans.forEach((plan) => {
+  planRows.forEach((plan) => {
     const dockIndex = DOCK_INDEX_BY_CODE[plan.dock];
 
     if (
@@ -220,7 +254,6 @@ function convertPlansToDocks(
         elapsed.elapsedMinutes >= 40
           ? 'delayed'
           : 'unloading';
-
       dock.currentTruck = {
         id: plan.codeRun,
         route: plan.route || '-',
@@ -233,7 +266,6 @@ function convertPlansToDocks(
         progress: elapsed.progress,
         startTime,
       };
-
       return;
     }
 
@@ -316,10 +348,14 @@ function isOperationConfirmed(
     );
   }
 
-  return (
-    serverPlan.status === 'COMPLETED' &&
-    Boolean(serverPlan.timeOut)
-  );
+  if (operation.operation === 'COMPLETE') {
+    return (
+      serverPlan.status === 'COMPLETED' &&
+      Boolean(serverPlan.timeOut)
+    );
+  }
+
+  return serverPlan.dock === operation.targetDockCode;
 }
 
 function mergePendingOperations(
@@ -351,19 +387,16 @@ function mergePendingOperations(
       return;
     }
 
-    targetDock.operationState =
-      createOperationState(operation);
+    targetDock.operationState = createOperationState(operation);
 
     if (operation.operation === 'START') {
-      const optimisticTruck = operation.optimisticTruck;
-
-      if (optimisticTruck) {
+      if (operation.optimisticTruck) {
         const elapsed = calculateElapsed(
-          optimisticTruck.startTime
+          operation.optimisticTruck.startTime
         );
 
         targetDock.currentTruck = {
-          ...optimisticTruck,
+          ...operation.optimisticTruck,
           elapsedTime: elapsed.elapsedTime,
           progress: elapsed.progress,
         };
@@ -372,24 +405,38 @@ function mergePendingOperations(
             ? 'delayed'
             : 'unloading';
       }
-
       return;
     }
 
-    targetDock.currentTruck = null;
-    targetDock.status = 'empty';
+    if (operation.operation === 'COMPLETE') {
+      targetDock.currentTruck = null;
+      targetDock.status = 'empty';
+      return;
+    }
+
+    if (operation.truck) {
+      targetDock.waitingQueue.push({
+        ...operation.truck,
+        dockCode:
+          operation.targetDockCode || operation.dockCode,
+        isMoved: true,
+      });
+      targetDock.waitingQueue.sort((first, second) =>
+        first.eta.localeCompare(second.eta)
+      );
+    }
   });
 
   return mergedDocks;
 }
 
 function updatePlanStatus(
-  plans: SmartDockPlan[],
+  planRows: SmartDockPlan[],
   codeRun: string,
   status: SmartDockStatus,
   timestamp: string
 ): SmartDockPlan[] {
-  return plans.map((plan) => {
+  return planRows.map((plan) => {
     if (plan.codeRun !== codeRun) {
       return plan;
     }
@@ -412,7 +459,7 @@ function updatePlanStatus(
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] =
-    useState(false);
+    useState(readStoredSession);
   const [time, setTime] = useState(new Date());
   const [docks, setDocks] = useState<DockData[]>(
     createEmptyDocks
@@ -424,6 +471,8 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState(
     getBangkokDate
   );
+  const [showReturnFullscreen, setShowReturnFullscreen] =
+    useState(false);
 
   const docksRef = useRef<DockData[]>(createEmptyDocks());
   const plansRef = useRef<SmartDockPlan[]>([]);
@@ -432,6 +481,8 @@ export default function App() {
   );
   const requestSequenceRef = useRef(0);
   const isFetchingRef = useRef(false);
+  const phoneWasFullscreenRef = useRef(false);
+  const waitingForPhoneReturnRef = useRef(false);
   const confirmationTimerRef = useRef<
     ReturnType<typeof setTimeout> | null
   >(null);
@@ -473,22 +524,17 @@ export default function App() {
     []
   );
 
-  const clearSuccessTimer = useCallback(
-    (dockId: string) => {
-      const timer = successTimersRef.current.get(dockId);
+  const clearSuccessTimer = useCallback((dockId: string) => {
+    const timer = successTimersRef.current.get(dockId);
 
-      if (timer) {
-        clearTimeout(timer);
-        successTimersRef.current.delete(dockId);
-      }
-    },
-    []
-  );
+    if (timer) {
+      clearTimeout(timer);
+      successTimersRef.current.delete(dockId);
+    }
+  }, []);
 
   const showSuccessState = useCallback(
-    (
-      operation: RuntimePendingOperation
-    ) => {
+    (operation: RuntimePendingOperation) => {
       clearSuccessTimer(operation.dockId);
 
       commitDocks((currentDocks) =>
@@ -513,8 +559,7 @@ export default function App() {
           currentDocks.map((dock) => {
             if (
               dock.id !== operation.dockId ||
-              dock.operationState?.codeRun !==
-                operation.codeRun ||
+              dock.operationState?.codeRun !== operation.codeRun ||
               dock.operationState.status !== 'success'
             ) {
               return dock;
@@ -526,7 +571,6 @@ export default function App() {
             };
           })
         );
-
         successTimersRef.current.delete(operation.dockId);
       }, SUCCESS_BADGE_MS);
 
@@ -559,12 +603,15 @@ export default function App() {
         return;
       }
 
-      if (isFetchingRef.current && !force) {
+      if (isFetchingRef.current) {
         return;
       }
 
-      const requestSequence =
-        requestSequenceRef.current + 1;
+      if (!force && document.visibilityState === 'hidden') {
+        return;
+      }
+
+      const requestSequence = requestSequenceRef.current + 1;
       requestSequenceRef.current = requestSequence;
       isFetchingRef.current = true;
       setIsLoading(true);
@@ -588,14 +635,11 @@ export default function App() {
 
         if (!response.ok || !data.success) {
           throw new Error(
-            data.error ||
-              'ไม่สามารถดึงข้อมูลแผนงานได้'
+            data.error || 'ไม่สามารถดึงข้อมูลแผนงานได้'
           );
         }
 
-        if (
-          requestSequence !== requestSequenceRef.current
-        ) {
+        if (requestSequence !== requestSequenceRef.current) {
           return;
         }
 
@@ -616,12 +660,10 @@ export default function App() {
 
             if (
               operation.phase === 'confirming' &&
-              now - operation.createdAt >=
-                CONFIRMATION_TIMEOUT_MS
+              now - operation.createdAt >= CONFIRMATION_TIMEOUT_MS
             ) {
               operation.phase = 'error';
-              operation.errorMessage =
-                'ยังยืนยันข้อมูลไม่ได้';
+              operation.errorMessage = 'ยังยืนยันข้อมูลไม่ได้';
               operation.lastCheckedAt = now;
               pendingOperationsRef.current.set(
                 codeRun,
@@ -648,9 +690,7 @@ export default function App() {
 
         scheduleConfirmationCheck();
       } catch (error: unknown) {
-        if (
-          requestSequence !== requestSequenceRef.current
-        ) {
+        if (requestSequence !== requestSequenceRef.current) {
           return;
         }
 
@@ -659,15 +699,10 @@ export default function App() {
             ? error.message
             : 'เกิดข้อผิดพลาดในการดึงข้อมูล';
 
-        console.error(
-          'Fetch Smart Dock data error:',
-          error
-        );
+        console.error('Fetch Smart Dock data error:', error);
         setErrorMessage(message);
       } finally {
-        if (
-          requestSequence === requestSequenceRef.current
-        ) {
+        if (requestSequence === requestSequenceRef.current) {
           isFetchingRef.current = false;
           setIsLoading(false);
         }
@@ -716,6 +751,54 @@ export default function App() {
       clearInterval(refreshTimer);
     };
   }, [fetchDockData, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const sessionTimer = setInterval(() => {
+      if (!readStoredSession()) {
+        setIsAuthenticated(false);
+        commitPlans([]);
+        commitDocks(createEmptyDocks());
+      }
+    }, 60000);
+
+    return () => {
+      clearInterval(sessionTimer);
+    };
+  }, [commitDocks, commitPlans, isAuthenticated]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === 'visible' &&
+        waitingForPhoneReturnRef.current
+      ) {
+        waitingForPhoneReturnRef.current = false;
+
+        if (
+          phoneWasFullscreenRef.current &&
+          !document.fullscreenElement
+        ) {
+          setShowReturnFullscreen(true);
+        }
+      }
+    };
+
+    document.addEventListener(
+      'visibilitychange',
+      handleVisibilityChange
+    );
+
+    return () => {
+      document.removeEventListener(
+        'visibilitychange',
+        handleVisibilityChange
+      );
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -769,6 +852,22 @@ export default function App() {
     };
   }, [commitDocks, isAuthenticated]);
 
+  const handleLogin = () => {
+    saveSession();
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+    pendingOperationsRef.current.clear();
+    setShowReturnFullscreen(false);
+    setIsAuthenticated(false);
+    commitPlans([]);
+    commitDocks(createEmptyDocks());
+    setLastSync(null);
+    setErrorMessage('');
+  };
+
   const handleDateChange = (date: string) => {
     if (!date || date === selectedDate) {
       return;
@@ -787,6 +886,24 @@ export default function App() {
     commitDocks(createEmptyDocks());
     setLastSync(null);
     setErrorMessage('');
+  };
+
+  const handlePhoneCall = (wasFullscreen: boolean) => {
+    phoneWasFullscreenRef.current = wasFullscreen;
+    waitingForPhoneReturnRef.current = true;
+  };
+
+  const returnToFullscreen = async () => {
+    try {
+      await document.documentElement.requestFullscreen({
+        navigationUI: 'hide',
+      });
+      setShowReturnFullscreen(false);
+      phoneWasFullscreenRef.current = false;
+    } catch (error: unknown) {
+      console.error('Return fullscreen error:', error);
+      setErrorMessage('ไม่สามารถกลับเข้า Full Screen ได้');
+    }
   };
 
   const handleEnterDock = async (
@@ -813,9 +930,7 @@ export default function App() {
       selectedDock.operationState?.status === 'saving' ||
       selectedDock.operationState?.status === 'confirming'
     ) {
-      setErrorMessage(
-        'Dock นี้กำลังปฏิบัติงานอยู่'
-      );
+      setErrorMessage('Dock นี้กำลังปฏิบัติงานอยู่');
       return;
     }
 
@@ -1016,9 +1131,7 @@ export default function App() {
     }
   };
 
-  const handleFinishOperation = async (
-    dockId: string
-  ) => {
+  const handleFinishOperation = async (dockId: string) => {
     const currentDock = docksRef.current.find(
       (dock) => dock.id === dockId
     );
@@ -1040,16 +1153,14 @@ export default function App() {
       return;
     }
 
+    const dockIndex = docksRef.current.findIndex(
+      (dock) => dock.id === dockId
+    );
     const operation: RuntimePendingOperation = {
       codeRun: currentTruck.id,
       operation: 'COMPLETE',
       dockId,
-      dockCode:
-        DOCK_CODES[
-          docksRef.current.findIndex(
-            (dock) => dock.id === dockId
-          )
-        ] || '',
+      dockCode: DOCK_CODES[dockIndex] || '',
       route: currentTruck.route,
       createdAt: Date.now(),
       truck: null,
@@ -1184,6 +1295,7 @@ export default function App() {
     truckId: string,
     sourceDockId: string
   ) => {
+    event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData(
       'application/json',
       JSON.stringify({
@@ -1193,7 +1305,7 @@ export default function App() {
     );
   };
 
-  const handleDrop = (
+  const handleDrop = async (
     event: React.DragEvent,
     targetDockId: string
   ) => {
@@ -1201,9 +1313,7 @@ export default function App() {
 
     try {
       const transferredData =
-        event.dataTransfer.getData(
-          'application/json'
-        );
+        event.dataTransfer.getData('application/json');
 
       if (!transferredData) {
         return;
@@ -1217,60 +1327,200 @@ export default function App() {
         sourceDockId: string;
       };
 
-      if (sourceDockId === targetDockId) {
+      if (
+        sourceDockId === targetDockId ||
+        pendingOperationsRef.current.has(truckId)
+      ) {
         return;
       }
 
+      const sourceDockIndex = docksRef.current.findIndex(
+        (dock) => dock.id === sourceDockId
+      );
+      const targetDockIndex = docksRef.current.findIndex(
+        (dock) => dock.id === targetDockId
+      );
+
+      if (sourceDockIndex < 0 || targetDockIndex < 0) {
+        return;
+      }
+
+      const sourceDock = docksRef.current[sourceDockIndex];
+      const movedTruck = sourceDock.waitingQueue.find(
+        (truck) => truck.id === truckId
+      );
+
+      if (!movedTruck) {
+        return;
+      }
+
+      const sourceDockCode =
+        movedTruck.dockCode || DOCK_CODES[sourceDockIndex];
+      const targetDockCode = DOCK_CODES[targetDockIndex];
+      const optimisticMovedTruck: WaitingTruck = {
+        ...movedTruck,
+        dockCode: targetDockCode,
+        isMoved: true,
+      };
+      const operation: RuntimePendingOperation = {
+        codeRun: truckId,
+        operation: 'MOVE',
+        dockId: targetDockId,
+        dockCode: targetDockCode,
+        route: movedTruck.route,
+        createdAt: Date.now(),
+        truck: optimisticMovedTruck,
+        currentTruck: null,
+        sourceDockId,
+        sourceDockCode,
+        targetDockId,
+        targetDockCode,
+        phase: 'saving',
+        optimisticTruck: null,
+        lastCheckedAt: 0,
+        errorMessage: '',
+      };
+
+      pendingOperationsRef.current.set(truckId, operation);
+      clearSuccessTimer(targetDockId);
+      setErrorMessage('');
+
       commitDocks((current) => {
         const nextDocks = cloneDocks(current);
-        const sourceDockIndex = nextDocks.findIndex(
-          (dock) => dock.id === sourceDockId
-        );
-        const targetDockIndex = nextDocks.findIndex(
-          (dock) => dock.id === targetDockId
-        );
 
-        if (
-          sourceDockIndex < 0 ||
-          targetDockIndex < 0
-        ) {
-          return current;
-        }
-
-        const truckIndex =
-          nextDocks[
-            sourceDockIndex
-          ].waitingQueue.findIndex(
-            (truck) => truck.id === truckId
+        nextDocks.forEach((dock) => {
+          dock.waitingQueue = dock.waitingQueue.filter(
+            (truck) => truck.id !== truckId
           );
-
-        if (truckIndex < 0) {
-          return current;
-        }
-
-        const movedTruck =
-          nextDocks[
-            sourceDockIndex
-          ].waitingQueue.splice(
-            truckIndex,
-            1
-          )[0];
-
-        nextDocks[
-          targetDockIndex
-        ].waitingQueue.push({
-          ...movedTruck,
-          isMoved: true,
         });
 
-        nextDocks[
-          targetDockIndex
-        ].waitingQueue.sort((first, second) =>
-          first.eta.localeCompare(second.eta)
+        nextDocks[targetDockIndex].waitingQueue.push(
+          optimisticMovedTruck
         );
+        nextDocks[targetDockIndex].waitingQueue.sort(
+          (first, second) => first.eta.localeCompare(second.eta)
+        );
+        nextDocks[targetDockIndex].operationState =
+          createOperationState(operation);
 
         return nextDocks;
       });
+
+      commitPlans((current) =>
+        current.map((plan) =>
+          plan.codeRun === truckId
+            ? {
+                ...plan,
+                dock: targetDockCode,
+                dockName: `Dock ${targetDockIndex + 1}`,
+              }
+            : plan
+        )
+      );
+
+      try {
+        const response = await fetch(
+          getApiUrl('/api/smart-dock/move'),
+          {
+            method: 'POST',
+            headers: {
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              codeRun: truckId,
+              sourceDock: sourceDockCode,
+              targetDock: targetDockCode,
+            }),
+          }
+        );
+
+        const data =
+          await response.json() as SmartDockResponse;
+
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.error || 'ไม่สามารถโยกช่องได้'
+          );
+        }
+
+        const latestOperation =
+          pendingOperationsRef.current.get(truckId);
+
+        if (latestOperation) {
+          latestOperation.phase = 'confirming';
+          latestOperation.lastCheckedAt = Date.now();
+          pendingOperationsRef.current.set(
+            truckId,
+            latestOperation
+          );
+
+          commitDocks((current) =>
+            current.map((dock) =>
+              dock.id === targetDockId
+                ? {
+                    ...dock,
+                    operationState:
+                      createOperationState(latestOperation),
+                  }
+                : dock
+            )
+          );
+        }
+
+        setLastSync(new Date());
+        scheduleConfirmationCheck();
+      } catch (error: unknown) {
+        pendingOperationsRef.current.delete(truckId);
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'เกิดข้อผิดพลาดในการโยกช่อง';
+
+        commitDocks((current) => {
+          const nextDocks = cloneDocks(current);
+
+          nextDocks.forEach((dock) => {
+            dock.waitingQueue = dock.waitingQueue.filter(
+              (truck) => truck.id !== truckId
+            );
+          });
+
+          nextDocks[sourceDockIndex].waitingQueue.push({
+            ...movedTruck,
+            dockCode: sourceDockCode,
+            isMoved: false,
+          });
+          nextDocks[sourceDockIndex].waitingQueue.sort(
+            (first, second) => first.eta.localeCompare(second.eta)
+          );
+          nextDocks[targetDockIndex].operationState = undefined;
+          nextDocks[sourceDockIndex].operationState = {
+            codeRun: truckId,
+            operation: 'MOVE',
+            status: 'error',
+            message: 'บันทึกไม่สำเร็จ',
+            startedAt: Date.now(),
+          };
+
+          return nextDocks;
+        });
+
+        commitPlans((current) =>
+          current.map((plan) =>
+            plan.codeRun === truckId
+              ? {
+                  ...plan,
+                  dock: sourceDockCode,
+                  dockName: `Dock ${sourceDockIndex + 1}`,
+                }
+              : plan
+          )
+        );
+
+        setErrorMessage(message);
+      }
     } catch (error) {
       console.error('Move queue error:', error);
       setErrorMessage('ไม่สามารถย้ายคิวรถได้');
@@ -1304,11 +1554,7 @@ export default function App() {
   };
 
   if (!isAuthenticated) {
-    return (
-      <Login
-        onLogin={() => setIsAuthenticated(true)}
-      />
-    );
+    return <Login onLogin={handleLogin} />;
   }
 
   return (
@@ -1317,7 +1563,12 @@ export default function App() {
         time={time}
         kpiData={kpiData}
         selectedDate={selectedDate}
+        isRefreshing={isLoading}
         onDateChange={handleDateChange}
+        onRefresh={() => {
+          void fetchDockData(true);
+        }}
+        onLogout={handleLogout}
       />
 
       {errorMessage && (
@@ -1352,11 +1603,13 @@ export default function App() {
               )
             }
             onDrop={(event) =>
-              handleDrop(event, dock.id)
+              void handleDrop(event, dock.id)
             }
-            onDragOver={(event) =>
-              event.preventDefault()
-            }
+            onDragOver={(event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'move';
+            }}
+            onPhoneCall={handlePhoneCall}
           />
         ))}
       </main>
@@ -1372,16 +1625,13 @@ export default function App() {
                   : 'bg-emerald-500')
               }
             />
-
             {errorMessage
               ? 'SYSTEM WARNING'
               : 'SYSTEM STABLE'}
           </span>
-
           <span className="text-slate-600">|</span>
           <span>PLAN DATE: {selectedDate}</span>
           <span className="text-slate-600">|</span>
-
           <span>
             LAST SYNC:{' '}
             {lastSync
@@ -1403,6 +1653,29 @@ export default function App() {
           <span>ZONE: A-WEST WAREHOUSE</span>
         </div>
       </footer>
+
+      {showReturnFullscreen && (
+        <div className="fixed inset-0 z-[200] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-5">
+              <span className="text-3xl font-black">⛶</span>
+            </div>
+            <h2 className="text-2xl font-black text-slate-800">
+              กลับเข้า Full Screen
+            </h2>
+            <p className="text-sm text-slate-500 mt-2 mb-6">
+              แตะปุ่มด้านล่างเพื่อกลับสู่หน้าจอแสดงผล
+            </p>
+            <button
+              type="button"
+              onClick={returnToFullscreen}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-lg py-4 rounded-xl shadow-lg transition-colors"
+            >
+              กลับเข้า Full Screen
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
