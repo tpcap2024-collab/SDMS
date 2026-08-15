@@ -87,6 +87,10 @@ const CONFIRMATION_RETRY_MS = 3000;
 const CONFIRMATION_TIMEOUT_MS = 60000;
 const SUCCESS_BADGE_MS = 2500;
 
+function isInboundProject(plan: SmartDockPlan): boolean {
+  return String(plan.project || '').trim().toUpperCase() === 'INBOUND';
+}
+
 function getBangkokDate(): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Bangkok',
@@ -645,6 +649,7 @@ export default function App() {
 
         const rows = (data.result?.rows || []).filter(
           (row) =>
+            isInboundProject(row) &&
             DOCK_INDEX_BY_CODE[row.dock] !== undefined
         );
         const confirmedOperations: RuntimePendingOperation[] = [];
