@@ -518,7 +518,7 @@ export default function DockColumn({
                   className="hover:bg-slate-700 p-2 rounded-lg transition-colors"
                   aria-label="ปิดรายการรถรอทั้งหมด"
                 >
-                  <X size={22} />
+                  <X size={32} />
                 </button>
               </div>
               <div className="p-4 overflow-y-auto space-y-2 bg-slate-50">
@@ -539,19 +539,19 @@ export default function DockColumn({
               }
             }}
           >
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm max-h-[92vh] overflow-y-auto border border-slate-200">
-              <div className="bg-blue-600 p-3 flex justify-between items-center text-white sticky top-0 z-10">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[94vh] overflow-y-auto border-2 border-slate-300">
+              <div className="bg-blue-600 p-5 flex justify-between items-center text-white sticky top-0 z-10">
                 <h3 className="font-black text-4xl">รายละเอียดรถ</h3>
                 <button
                   type="button"
                   onClick={closeTruckDetails}
-                  className="hover:bg-blue-700 p-1 rounded transition-colors"
+                  className="hover:bg-blue-700 p-2 rounded-lg transition-colors"
                 >
-                  <X size={20} />
+                  <X size={32} />
                 </button>
               </div>
 
-              <div className="p-5 space-y-4">
+              <div className="p-7 space-y-6">
                 <div className="text-center">
                   <div className="text-7xl font-black text-black tracking-tight">
                     {selectedTruck.licensePlate}
@@ -642,7 +642,7 @@ export default function DockColumn({
                   โยกช่อง
                 </button>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   {calledTrucks[selectedTruck.id] ? (
                     <>
                       <button
@@ -722,11 +722,11 @@ export default function DockColumn({
               }
             }}
           >
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
-              <div className="bg-amber-500 p-4 flex justify-between items-center text-slate-900">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[94vh] overflow-y-auto border-2 border-slate-300">
+              <div className="bg-amber-500 p-5 flex justify-between items-center text-black sticky top-0 z-10">
                 <div>
-                  <h3 className="font-black text-xl">โยกช่อง</h3>
-                  <p className="text-xs font-bold mt-1">
+                  <h3 className="font-black text-4xl">โยกช่อง</h3>
+                  <p className="text-2xl font-black mt-2">
                     {selectedTruck.licensePlate} · {selectedTruck.route}
                   </p>
                 </div>
@@ -735,15 +735,15 @@ export default function DockColumn({
                   onClick={() => setShowMoveDock(false)}
                   className="hover:bg-amber-600 p-2 rounded-lg"
                 >
-                  <X size={22} />
+                  <X size={32} />
                 </button>
               </div>
 
-              <div className="p-5">
-                <p className="text-sm font-bold text-slate-600 mb-3">
+              <div className="p-7">
+                <p className="text-2xl font-black text-black mb-5">
                   เลือกช่องปลายทาง
                 </p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   {DOCK_OPTIONS.filter(
                     (option) => option.code !== selectedTruck.dockCode
                   ).map((option) => (
@@ -752,10 +752,10 @@ export default function DockColumn({
                       type="button"
                       onClick={() => moveSelectedTruck(option.code)}
                       disabled={isOperationBusy}
-                      className="min-h-20 rounded-xl border-2 border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-colors flex flex-col items-center justify-center"
+                      className="min-h-32 rounded-2xl border-2 border-blue-300 bg-blue-50 text-blue-700 shadow-sm hover:bg-blue-100 hover:border-blue-400 transition-colors flex flex-col items-center justify-center"
                     >
-                      <span className="text-lg font-black">{option.name}</span>
-                      <span className="text-xs font-bold mt-1">
+                      <span className="text-4xl font-black">{option.name}</span>
+                      <span className="text-2xl font-black mt-2">
                         {option.code}
                       </span>
                     </button>
@@ -764,7 +764,7 @@ export default function DockColumn({
                 <button
                   type="button"
                   onClick={() => setShowMoveDock(false)}
-                  className="w-full mt-4 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50"
+                  className="w-full mt-6 min-h-16 py-4 rounded-xl border-2 border-slate-300 text-black text-2xl font-black hover:bg-slate-50"
                 >
                   ยกเลิก
                 </button>
