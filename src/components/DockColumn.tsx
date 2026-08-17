@@ -353,7 +353,7 @@ export default function DockColumn({
         >
           <h3
             className={
-              'mb-4 text-3xl font-black uppercase leading-none tracking-tight ' +
+              'mb-3 text-xl font-black uppercase leading-none tracking-tight ' +
               config.queueHeader
             }
           >
