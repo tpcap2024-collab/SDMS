@@ -17,6 +17,14 @@ export type DockOperationStatus =
   | 'success'
   | 'error';
 
+export interface DockMoveHistoryItem {
+  movedAt: string;
+  sourceDockCode: string;
+  sourceDockName: string;
+  targetDockCode: string;
+  targetDockName: string;
+}
+
 export interface Truck {
   id: string;
   route: string;
@@ -41,6 +49,8 @@ export interface WaitingTruck {
   project: string;
   dockCode: string;
   isMoved?: boolean;
+  moveFrom?: string;
+  moveHistory?: DockMoveHistoryItem[];
 }
 
 export interface DockOperationState {
