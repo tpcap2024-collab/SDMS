@@ -38,6 +38,16 @@ type SmartDockPlan = {
   planEta: string;
   planEtd: string;
   remark: string;
+  moveFrom?: string;
+  moveHistoryText?: string;
+  moveHistory?: Array<{
+    movedAt: string;
+    sourceDockCode: string;
+    sourceDockName: string;
+    targetDockCode: string;
+    targetDockName: string;
+  }>;
+  isMoved?: boolean;
   timeIn: string;
   timeOut: string;
   durationMinutes: number | string;
@@ -98,6 +108,44 @@ function getBangkokDate(): string {
     month: '2-digit',
     day: '2-digit',
   }).format(new Date());
+}
+
+function getBangkokTimestamp(): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date());
+
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value])
+  );
+
+  return (
+    values.year +
+    '-' +
+    values.month +
+    '-' +
+    values.day +
+    ' ' +
+    values.hour +
+    ':' +
+    values.minute +
+    ':' +
+    values.second
+  );
+}
+
+function getDockDisplayName(dockCode: string): string {
+  const dockIndex = DOCK_INDEX_BY_CODE[dockCode];
+  return dockIndex === undefined
+    ? dockCode
+    : 'Dock ' + (dockIndex + 1);
 }
 
 function getApiUrl(path: string): string {
@@ -226,7 +274,13 @@ function createWaitingTruck(
     company: plan.company || '',
     project: plan.project || '',
     dockCode: plan.dock,
-    isMoved: false,
+    isMoved:
+      Boolean(plan.isMoved) ||
+      Boolean(plan.moveHistory?.length),
+    moveFrom: plan.moveFrom || '',
+    moveHistory: (plan.moveHistory || []).map((item) => ({
+      ...item,
+    })),
   };
 }
 
@@ -1406,10 +1460,23 @@ export default function App() {
       const sourceDockCode =
         movedTruck.dockCode || DOCK_CODES[sourceDockIndex];
       const targetDockCode = DOCK_CODES[targetDockIndex];
+      const movedAt = getBangkokTimestamp();
+      const optimisticMoveHistory = [
+        ...(movedTruck.moveHistory || []),
+        {
+          movedAt,
+          sourceDockCode,
+          sourceDockName: getDockDisplayName(sourceDockCode),
+          targetDockCode,
+          targetDockName: getDockDisplayName(targetDockCode),
+        },
+      ];
       const optimisticMovedTruck: WaitingTruck = {
         ...movedTruck,
         dockCode: targetDockCode,
         isMoved: true,
+        moveFrom: sourceDockCode,
+        moveHistory: optimisticMoveHistory,
       };
       const operation: RuntimePendingOperation = {
         codeRun: truckId,
@@ -1462,6 +1529,19 @@ export default function App() {
                 ...plan,
                 dock: targetDockCode,
                 dockName: `Dock ${targetDockIndex + 1}`,
+                moveFrom: sourceDockCode,
+                isMoved: true,
+                moveHistory: optimisticMoveHistory,
+                moveHistoryText: optimisticMoveHistory
+                  .map(
+                    (item) =>
+                      item.movedAt +
+                      '|' +
+                      item.sourceDockCode +
+                      '|' +
+                      item.targetDockCode
+                  )
+                  .join('\n'),
               }
             : plan
         )
@@ -1563,6 +1643,19 @@ export default function App() {
                   ...plan,
                   dock: sourceDockCode,
                   dockName: `Dock ${sourceDockIndex + 1}`,
+                  moveFrom: movedTruck.moveFrom || '',
+                  isMoved: Boolean(movedTruck.moveHistory?.length),
+                  moveHistory: movedTruck.moveHistory || [],
+                  moveHistoryText: (movedTruck.moveHistory || [])
+                    .map(
+                      (item) =>
+                        item.movedAt +
+                        '|' +
+                        item.sourceDockCode +
+                        '|' +
+                        item.targetDockCode
+                    )
+                    .join('\n'),
                 }
               : plan
           )
