@@ -341,7 +341,16 @@ export default function DockColumn({
           <span className="text-2xl">DOCK</span>
           <span className="text-5xl leading-none">{dockNumber}</span>
         </span>
-        <span className="text-base font-bold mt-1">{config.badge}</span>
+        <span className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1.5 text-base font-black text-black shadow-sm ring-1 ring-black/10">
+          {dock.status === 'delayed' ? (
+            <AlertCircle size={19} strokeWidth={2.8} />
+          ) : dock.status === 'unloading' ? (
+            <PlayCircle size={19} strokeWidth={2.8} />
+          ) : (
+            <CheckCircle2 size={19} strokeWidth={2.8} />
+          )}
+          <span>{config.badge}</span>
+        </span>
       </div>
 
       <div className="flex-1 p-2 flex flex-col overflow-hidden">
@@ -351,12 +360,7 @@ export default function DockColumn({
             config.queueContainer
           }
         >
-          <h3
-            className={
-              'mb-3 text-xl font-black uppercase leading-none tracking-tight ' +
-              config.queueHeader
-            }
-          >
+          <h3 className="mb-3 text-lg font-black uppercase leading-none tracking-tight text-blue-600">
             Waiting ({dock.waitingQueue.length})
           </h3>
 
@@ -481,13 +485,13 @@ export default function DockColumn({
           onClick={onFinish}
           disabled={!dock.currentTruck || isOperationBusy}
           className={
-            'w-full py-2 rounded-lg font-bold text-[12px] uppercase shadow-sm flex items-center justify-center gap-1.5 transition-colors ' +
+            'w-full min-h-16 py-4 rounded-xl font-black text-base uppercase shadow-md flex items-center justify-center gap-2.5 transition-colors touch-manipulation ' +
             (dock.currentTruck && !isOperationBusy
               ? 'bg-emerald-500 text-white hover:bg-emerald-600'
               : 'bg-slate-100 text-slate-400 cursor-not-allowed')
           }
         >
-          <CheckCircle2 size={18} />
+          <CheckCircle2 size={24} strokeWidth={2.6} />
           {isOperationBusy ? 'กำลังดำเนินการ' : 'ลงงานเรียบร้อย'}
         </button>
       </div>
