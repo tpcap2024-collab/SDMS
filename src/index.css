@@ -1,1 +1,82 @@
 @import "tailwindcss";
+
+:root {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 320px;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+button,
+a,
+input {
+  touch-action: manipulation;
+}
+
+.sdms-dock-viewport {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.sdms-dock-track {
+  width: calc(100% / var(--sdms-display-scale, 1));
+  height: calc(100% / var(--sdms-display-scale, 1));
+  transform-origin: top left;
+  zoom: var(--sdms-display-scale, 1);
+}
+
+.sdms-desktop-mode .sdms-dock-track {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.sdms-dock-slide {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-right: 1px solid rgb(203 213 225);
+}
+
+.sdms-smartphone-mode {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sdms-smartphone-mode .sdms-dock-track {
+  display: flex;
+  width: calc(600% / var(--sdms-display-scale, 1));
+  min-width: calc(600% / var(--sdms-display-scale, 1));
+}
+
+.sdms-smartphone-mode .sdms-dock-slide {
+  flex: 0 0 calc(100% / 6);
+  width: calc(100% / 6);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+@media (max-width: 900px) {
+  .sdms-desktop-mode .sdms-dock-track {
+    width: calc(300% / var(--sdms-display-scale, 1));
+    min-width: calc(300% / var(--sdms-display-scale, 1));
+  }
+}
+
+@media (max-width: 640px) {
+  .sdms-dock-viewport {
+    scrollbar-width: thin;
+  }
+}
