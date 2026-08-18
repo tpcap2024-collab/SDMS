@@ -184,27 +184,14 @@ function readStoredSession(): boolean {
 
 function readDisplayScale(): number {
   try {
-    const storedScale = Number(
-      localStorage.getItem(DISPLAY_SCALE_STORAGE_KEY)
-    );
-    return DISPLAY_SCALE_VALUES.includes(
-      storedScale as (typeof DISPLAY_SCALE_VALUES)[number]
-    )
-      ? storedScale
-      : 100;
-  } catch {
-    return 100;
-  }
+    const value = Number(localStorage.getItem(DISPLAY_SCALE_STORAGE_KEY));
+    return DISPLAY_SCALE_VALUES.includes(value as (typeof DISPLAY_SCALE_VALUES)[number]) ? value : 100;
+  } catch { return 100; }
 }
-
 function readSmartphoneMode(): boolean {
-  try {
-    return localStorage.getItem(SMARTPHONE_MODE_STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
+  try { return localStorage.getItem(SMARTPHONE_MODE_STORAGE_KEY) === 'true'; }
+  catch { return false; }
 }
-
 function saveSession(): void {
   const session: StoredSession = {
     expiresAt: Date.now() + SESSION_DURATION_MS,
@@ -558,8 +545,7 @@ export default function App() {
   const [showReturnFullscreen, setShowReturnFullscreen] =
     useState(false);
   const [displayScale, setDisplayScale] = useState(readDisplayScale);
-  const [smartphoneMode, setSmartphoneMode] =
-    useState(readSmartphoneMode);
+  const [smartphoneMode, setSmartphoneMode] = useState(readSmartphoneMode);
 
   const docksRef = useRef<DockData[]>(createEmptyDocks());
   const plansRef = useRef<SmartDockPlan[]>([]);
@@ -1761,37 +1747,23 @@ export default function App() {
   };
 
   const changeDisplayScale = (direction: -1 | 1) => {
-    setDisplayScale((currentScale) => {
-      const currentIndex = DISPLAY_SCALE_VALUES.indexOf(
-        currentScale as (typeof DISPLAY_SCALE_VALUES)[number]
-      );
-      const safeIndex = currentIndex >= 0 ? currentIndex : 2;
-      const nextIndex = Math.min(
-        DISPLAY_SCALE_VALUES.length - 1,
-        Math.max(0, safeIndex + direction)
-      );
-      const nextScale = DISPLAY_SCALE_VALUES[nextIndex];
-      localStorage.setItem(
-        DISPLAY_SCALE_STORAGE_KEY,
-        String(nextScale)
-      );
-      return nextScale;
+    setDisplayScale((current) => {
+      const found = DISPLAY_SCALE_VALUES.indexOf(current as (typeof DISPLAY_SCALE_VALUES)[number]);
+      const index = found >= 0 ? found : 2;
+      const next = DISPLAY_SCALE_VALUES[Math.min(DISPLAY_SCALE_VALUES.length - 1, Math.max(0, index + direction))];
+      localStorage.setItem(DISPLAY_SCALE_STORAGE_KEY, String(next));
+      return next;
     });
   };
-
   const resetDisplayScale = () => {
     setDisplayScale(100);
     localStorage.setItem(DISPLAY_SCALE_STORAGE_KEY, '100');
   };
-
   const toggleSmartphoneMode = () => {
-    setSmartphoneMode((currentMode) => {
-      const nextMode = !currentMode;
-      localStorage.setItem(
-        SMARTPHONE_MODE_STORAGE_KEY,
-        String(nextMode)
-      );
-      return nextMode;
+    setSmartphoneMode((current) => {
+      const next = !current;
+      localStorage.setItem(SMARTPHONE_MODE_STORAGE_KEY, String(next));
+      return next;
     });
   };
 
@@ -1826,7 +1798,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 font-sans overflow-hidden border-8 border-slate-200">
+    <div className={'flex flex-col h-screen bg-slate-50 font-sans overflow-hidden border-slate-200 ' + (smartphoneMode ? 'border-2' : 'border-8')}>
       <Header
         time={time}
         kpiData={kpiData}
@@ -1857,18 +1829,8 @@ export default function App() {
         </div>
       )}
 
-      <main
-        className={
-          'sdms-dock-viewport flex-1 bg-slate-200 ' +
-          (smartphoneMode ? 'sdms-smartphone-mode' : 'sdms-desktop-mode')
-        }
-      >
-        <div
-          className="sdms-dock-track"
-          style={{
-            '--sdms-display-scale': displayScale / 100,
-          } as React.CSSProperties}
-        >
+      <main className={'sdms-dock-viewport flex-1 bg-slate-200 ' + (smartphoneMode ? 'sdms-smartphone-mode' : 'sdms-desktop-mode')}>
+        <div className="sdms-dock-track" style={{ '--sdms-display-scale': displayScale / 100 } as React.CSSProperties}>
         {docks.map((dock) => (
           <section key={dock.id} className="sdms-dock-slide">
           <DockColumn
@@ -1910,7 +1872,7 @@ export default function App() {
         </div>
       </main>
 
-      <footer className="h-8 bg-slate-800 text-slate-400 flex items-center justify-between px-6 text-[10px] font-bold uppercase tracking-widest shrink-0">
+      <footer className={(smartphoneMode ? 'hidden ' : 'flex ') + 'h-8 bg-slate-800 text-slate-400 items-center justify-between px-6 text-[10px] font-bold uppercase tracking-widest shrink-0'}>
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1.5">
             <span
