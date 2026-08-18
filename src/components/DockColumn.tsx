@@ -282,7 +282,7 @@ export default function DockColumn({
         <div
           className={
             'flex justify-between gap-2 font-bold ' +
-            (compact ? 'text-sm ' : 'text-lg ') +
+            (compact ? 'text-base ' : 'text-xl ') +
             'text-black'
           }
         >
@@ -293,25 +293,27 @@ export default function DockColumn({
           <div
             className={
               'min-w-0 truncate font-black text-black ' +
-              (compact ? 'text-base' : 'text-xl')
+              (compact ? 'text-lg' : 'text-2xl')
             }
           >
             {truck.licensePlate}
           </div>
           {truck.isMoved && (
-            <div
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-white shadow-sm"
-              title="รถโยกช่อง"
-              aria-label="รถโยกช่อง"
-            >
-              <ArrowRightLeft size={16} strokeWidth={2.8} />
+            <div className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-600 px-2.5 py-1 text-xs font-black text-white shadow-sm">
+              <ArrowRightLeft size={13} />
+              รถโยกช่อง
             </div>
           )}
         </div>
         {!compact && (
-          <div className="mt-1 text-xs text-slate-500 truncate">
-            {getDisplayText(truck.driverName)} ·{' '}
-            {getDisplayText(truck.telDriver)}
+          <div className="mt-2 flex min-w-0 items-center gap-2 text-base leading-tight">
+            <span className="min-w-0 truncate font-bold text-slate-700">
+              {getDisplayText(truck.driverName)}
+            </span>
+            <span className="shrink-0 text-slate-400">·</span>
+            <span className="shrink-0 font-black text-blue-700">
+              {getDisplayText(truck.telDriver)}
+            </span>
           </div>
         )}
       </div>
@@ -340,10 +342,11 @@ export default function DockColumn({
           config.header
         }
       >
-        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-white/90 text-6xl font-black leading-none text-slate-900 shadow-lg ring-2 ring-black/10">
-          {dockNumber}
-        </div>
-        <span className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-1.5 text-base font-black text-black shadow-md ring-1 ring-black/10">
+        <span className="font-black tracking-tighter uppercase flex items-baseline gap-1.5">
+          <span className="text-2xl">DOCK</span>
+          <span className="text-5xl leading-none">{dockNumber}</span>
+        </span>
+        <span className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1.5 text-base font-black text-black shadow-sm ring-1 ring-black/10">
           {dock.status === 'delayed' ? (
             <AlertCircle size={19} strokeWidth={2.8} />
           ) : dock.status === 'unloading' ? (
@@ -362,7 +365,7 @@ export default function DockColumn({
             config.queueContainer
           }
         >
-          <h3 className="mb-2 text-base font-black uppercase leading-none tracking-tight text-blue-600">
+          <h3 className="mb-3 text-lg font-black uppercase leading-none tracking-tight text-blue-600">
             Waiting ({dock.waitingQueue.length})
           </h3>
 
@@ -373,7 +376,7 @@ export default function DockColumn({
                 <button
                   type="button"
                   onClick={() => setShowAllWaiting(true)}
-                  className="w-full text-center text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-dashed border-blue-200 rounded-lg py-2 transition-colors"
+                  className="w-full text-center text-[10px] font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-dashed border-blue-200 rounded-lg py-2 transition-colors"
                 >
                   +{remainingQueue} more vehicles...
                 </button>
@@ -389,11 +392,11 @@ export default function DockColumn({
 
       <div className="w-full h-3 bg-slate-100 border-y-2 border-slate-200 shrink-0" />
 
-      <div className="h-[250px] p-2 shrink-0 flex flex-col overflow-hidden">
+      <div className="h-[220px] p-2 shrink-0 flex flex-col">
         {dock.currentTruck ? (
           <div
             className={
-              'flex-1 min-h-0 overflow-hidden rounded-lg p-3 flex flex-col relative ' +
+              'flex-1 rounded-lg p-3 flex flex-col relative ' +
               (dock.status === 'delayed'
                 ? 'bg-rose-50 border-2 border-rose-200'
                 : 'bg-white border border-slate-200')
@@ -403,7 +406,7 @@ export default function DockColumn({
             <div className="mb-1 flex justify-between items-start gap-2">
               <p
                 className={
-                  'text-sm font-bold truncate ' +
+                  'text-xs font-bold truncate ' +
                   (dock.status === 'delayed'
                     ? 'text-rose-600'
                     : 'text-amber-600')
@@ -420,35 +423,35 @@ export default function DockColumn({
 
             <h2
               className={
-                'text-3xl font-black leading-none text-slate-800 ' +
+                'text-2xl font-black leading-none text-slate-800 ' +
                 (showOperationBadge ? 'pr-24' : '')
               }
             >
               {dock.currentTruck.licensePlate}
             </h2>
 
-            <div className="mt-3 space-y-1.5 text-sm">
+            <div className="mt-3 space-y-1 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-400">Driver</span>
-                <span className="font-black text-base text-slate-700 truncate max-w-[130px]">
+                <span className="font-bold text-slate-700 truncate max-w-[100px]">
                   {dock.currentTruck.driver}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Transport</span>
-                <span className="font-black text-base text-slate-700 truncate max-w-[130px]">
+                <span className="font-bold text-slate-700 truncate max-w-[100px]">
                   {dock.currentTruck.transportCo}
                 </span>
               </div>
               <div className="flex justify-between border-t border-slate-100 pt-1">
                 <span className="text-slate-400">Arrival</span>
-                <span className="font-black text-base text-slate-700">
+                <span className="font-bold text-slate-700">
                   {dock.currentTruck.entryTime}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Duration</span>
-                <span className="font-black text-base text-amber-600">
+                <span className="font-black text-amber-600">
                   {dock.currentTruck.elapsedTime}
                 </span>
               </div>
@@ -466,7 +469,7 @@ export default function DockColumn({
                   style={{ width: dock.currentTruck.progress + '%' }}
                 />
               </div>
-              <p className="text-right text-sm font-black mt-1 text-amber-600 uppercase">
+              <p className="text-right text-[10px] font-bold mt-1 text-amber-600 uppercase">
                 {dock.currentTruck.progress}% Progress
               </p>
             </div>
@@ -481,13 +484,13 @@ export default function DockColumn({
         )}
       </div>
 
-      <div className="relative z-20 p-2 border-t border-slate-200 shrink-0 bg-white">
+      <div className="p-2 border-t border-slate-200 shrink-0 bg-white">
         <button
           type="button"
           onClick={onFinish}
           disabled={!dock.currentTruck || isOperationBusy}
           className={
-            'w-full min-h-16 py-4 rounded-xl font-black text-lg uppercase shadow-md flex items-center justify-center gap-2.5 transition-colors touch-manipulation ' +
+            'w-full min-h-16 py-4 rounded-xl font-black text-base uppercase shadow-md flex items-center justify-center gap-2.5 transition-colors touch-manipulation ' +
             (dock.currentTruck && !isOperationBusy
               ? 'bg-emerald-500 text-white hover:bg-emerald-600'
               : 'bg-slate-100 text-slate-400 cursor-not-allowed')
@@ -511,10 +514,10 @@ export default function DockColumn({
             <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden border border-slate-200 flex flex-col">
               <div className="bg-slate-800 p-4 flex justify-between items-center text-white shrink-0">
                 <div>
-                  <h3 className="font-black text-xl">
+                  <h3 className="font-black text-2xl">
                     รถรอทั้งหมด · {dock.name}
                   </h3>
-                  <p className="text-xs text-slate-300 mt-1">
+                  <p className="text-sm font-bold text-slate-300 mt-1">
                     จำนวน {sortedWaitingQueue.length} คัน เรียงตาม ETA
                   </p>
                 </div>
@@ -547,7 +550,7 @@ export default function DockColumn({
           >
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[94vh] overflow-y-auto border-2 border-slate-300">
               <div className="bg-blue-600 p-5 flex justify-between items-center text-white sticky top-0 z-10">
-                <h3 className="font-black text-3xl">รายละเอียดรถ</h3>
+                <h3 className="font-black text-4xl">รายละเอียดรถ</h3>
                 <button
                   type="button"
                   onClick={closeTruckDetails}
@@ -559,36 +562,36 @@ export default function DockColumn({
 
               <div className="p-7 space-y-6">
                 <div className="text-center">
-                  <div className="text-5xl font-black text-black tracking-tight">
+                  <div className="text-7xl font-black text-black tracking-tight">
                     {selectedTruck.licensePlate}
                   </div>
-                  <div className="text-black font-black text-lg mt-2 uppercase">
+                  <div className="text-black font-black text-2xl mt-2 uppercase">
                     ทะเบียนรถ
                   </div>
                 </div>
 
-                <div className="space-y-4 text-lg bg-slate-50 p-5 rounded-xl border-2 border-slate-200">
+                <div className="space-y-5 text-xl bg-slate-50 p-6 rounded-xl border-2 border-slate-200">
                   <div className="flex justify-between border-b border-slate-200 pb-2 gap-3">
-                    <span className="text-black font-black text-xl">เส้นทาง</span>
-                    <span className="font-black text-2xl text-black text-right">
+                    <span className="text-black font-black text-2xl">เส้นทาง</span>
+                    <span className="font-black text-3xl text-black text-right">
                       {selectedTruck.route}
                     </span>
                   </div>
                   <div className="flex justify-between border-b border-slate-200 pb-2 gap-3">
-                    <span className="text-black font-black text-xl">เวลาลงงาน</span>
-                    <span className="font-black text-2xl text-black text-right">
+                    <span className="text-black font-black text-2xl">เวลาลงงาน</span>
+                    <span className="font-black text-3xl text-black text-right">
                       {selectedTruck.eta}
                     </span>
                   </div>
                   <div className="flex justify-between border-b border-slate-200 pb-2 gap-3">
-                    <span className="text-black font-black text-xl">ชื่อคนขับ</span>
-                    <span className="font-black text-2xl text-black text-right">
+                    <span className="text-black font-black text-2xl">ชื่อคนขับ</span>
+                    <span className="font-black text-3xl text-black text-right">
                       {getDisplayText(selectedTruck.driverName)}
                     </span>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <span className="text-black font-black text-xl">เบอร์โทร</span>
-                    <span className="font-black text-2xl text-black text-right">
+                    <span className="text-black font-black text-2xl">เบอร์โทร</span>
+                    <span className="font-black text-3xl text-black text-right">
                       {getDisplayText(selectedTruck.telDriver)}
                     </span>
                   </div>
@@ -638,7 +641,7 @@ export default function DockColumn({
                   onClick={() => setShowMoveDock(true)}
                   disabled={isOperationBusy}
                   className={
-                    'w-full min-h-16 border-2 text-xl font-black py-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-3 ' +
+                    'w-full border-2 font-bold py-3 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2 ' +
                     (isOperationBusy
                       ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
                       : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100')
@@ -660,7 +663,7 @@ export default function DockColumn({
                           }))
                         }
                         disabled={isOperationBusy}
-                        className="w-full min-h-16 bg-rose-500 border-2 border-rose-500 text-white text-xl font-black py-4 rounded-xl disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400"
+                        className="w-full bg-rose-500 border-2 border-rose-500 text-white font-bold py-3 rounded-lg disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400"
                       >
                         ยกเลิกยืนยันโทร
                       </button>
@@ -668,7 +671,7 @@ export default function DockColumn({
                         type="button"
                         onClick={enterSelectedTruck}
                         disabled={isOperationBusy}
-                        className="w-full min-h-16 bg-blue-600 border-2 border-blue-600 text-white text-xl font-black py-4 rounded-xl flex items-center justify-center gap-2 disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400"
+                        className="w-full bg-blue-600 border-2 border-blue-600 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-1.5 disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400"
                       >
                         <PlayCircle size={18} />
                         เข้าช่อง
@@ -680,7 +683,7 @@ export default function DockColumn({
                         <a
                           href={selectedPhoneLink}
                           onClick={handlePhoneClick}
-                          className="w-full min-h-16 bg-emerald-50 border-2 border-emerald-200 text-emerald-600 text-xl font-black py-4 rounded-xl hover:bg-emerald-100 transition-colors flex items-center justify-center gap-3"
+                          className="w-full bg-emerald-50 border-2 border-emerald-200 text-emerald-600 font-bold py-3 rounded-lg hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
                         >
                           <Phone size={18} />
                           โทรออก
@@ -704,7 +707,7 @@ export default function DockColumn({
                           }))
                         }
                         disabled={isOperationBusy}
-                        className="w-full min-h-16 bg-blue-600 border-2 border-blue-600 text-white text-xl font-black py-4 rounded-xl disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400"
+                        className="w-full bg-blue-600 border-2 border-blue-600 text-white font-bold py-3 rounded-lg disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400"
                       >
                         ยืนยันโทรเรียกแล้ว
                       </button>
