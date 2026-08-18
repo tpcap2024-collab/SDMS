@@ -9,11 +9,8 @@ import {
   Maximize2,
   Minimize2,
   RefreshCw,
-  RotateCcw,
   Smartphone,
   Truck,
-  ZoomIn,
-  ZoomOut,
 } from 'lucide-react';
 import { KPIData } from '../types';
 
@@ -27,11 +24,7 @@ interface HeaderProps {
   ) => void;
   onRefresh: () => void;
   onLogout: () => void;
-  displayScale: number;
   smartphoneMode: boolean;
-  onScaleDecrease: () => void;
-  onScaleIncrease: () => void;
-  onScaleReset: () => void;
   onToggleSmartphoneMode: () => void;
 }
 
@@ -43,11 +36,7 @@ export default function Header({
   onDateChange,
   onRefresh,
   onLogout,
-  displayScale,
   smartphoneMode,
-  onScaleDecrease,
-  onScaleIncrease,
-  onScaleReset,
   onToggleSmartphoneMode,
 }: HeaderProps) {
   const [
@@ -245,14 +234,21 @@ export default function Header({
         'flex items-center justify-end gap-2 shrink-0 ' +
         (smartphoneMode ? 'ml-auto' : '')
       }>
-        <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 shadow-sm">
-          <button type="button" onClick={onToggleSmartphoneMode} className={'flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ' + (smartphoneMode ? 'border-blue-600 bg-blue-600 text-white' : 'border-transparent bg-white text-slate-600 hover:bg-slate-100')} title={smartphoneMode ? 'ปิดโหมดสมาร์ตโฟน' : 'เปิดโหมดสมาร์ตโฟน'} aria-label={smartphoneMode ? 'ปิดโหมดสมาร์ตโฟน' : 'เปิดโหมดสมาร์ตโฟน'} aria-pressed={smartphoneMode}>
-            <Smartphone size={20} strokeWidth={2.4} />
-          </button>
-          <button type="button" onClick={onScaleDecrease} disabled={displayScale <= 80} className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-35" title="ลดขนาดหน้าจอ" aria-label="ลดขนาดหน้าจอ"><ZoomOut size={19} /></button>
-          <button type="button" onClick={onScaleReset} className="flex h-9 min-w-[64px] items-center justify-center gap-1 rounded-lg bg-white px-2 text-sm font-black text-slate-700 hover:bg-slate-100" title="คืนขนาดเป็น 100%" aria-label="คืนขนาดเป็น 100%"><RotateCcw size={15} />{displayScale}%</button>
-          <button type="button" onClick={onScaleIncrease} disabled={displayScale >= 120} className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-35" title="เพิ่มขนาดหน้าจอ" aria-label="เพิ่มขนาดหน้าจอ"><ZoomIn size={19} /></button>
-        </div>
+        <button
+          type="button"
+          onClick={onToggleSmartphoneMode}
+          className={
+            'flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition-colors ' +
+            (smartphoneMode
+              ? 'border-blue-600 bg-blue-600 text-white'
+              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100')
+          }
+          title={smartphoneMode ? 'ปิดโหมดสมาร์ตโฟน' : 'เปิดโหมดสมาร์ตโฟน'}
+          aria-label={smartphoneMode ? 'ปิดโหมดสมาร์ตโฟน' : 'เปิดโหมดสมาร์ตโฟน'}
+          aria-pressed={smartphoneMode}
+        >
+          <Smartphone size={21} strokeWidth={2.4} />
+        </button>
         <label className={(smartphoneMode ? 'hidden ' : 'flex ') + 'items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5'}>
           <CalendarDays
             size={18}
