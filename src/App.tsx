@@ -92,6 +92,9 @@ const DOCK_INDEX_BY_CODE: Record<string, number> =
   );
 
 const SESSION_STORAGE_KEY = 'sdms-session';
+const DISPLAY_SCALE_STORAGE_KEY = 'sdms-display-scale';
+const SMARTPHONE_MODE_STORAGE_KEY = 'sdms-smartphone-mode';
+const DISPLAY_SCALE_VALUES = [80, 90, 100, 110, 120] as const;
 const SESSION_DURATION_MS = 43200000;
 const CONFIRMATION_RETRY_MS = 3000;
 const CONFIRMATION_TIMEOUT_MS = 60000;
@@ -175,6 +178,29 @@ function readStoredSession(): boolean {
     return true;
   } catch {
     localStorage.removeItem(SESSION_STORAGE_KEY);
+    return false;
+  }
+}
+
+function readDisplayScale(): number {
+  try {
+    const storedScale = Number(
+      localStorage.getItem(DISPLAY_SCALE_STORAGE_KEY)
+    );
+    return DISPLAY_SCALE_VALUES.includes(
+      storedScale as (typeof DISPLAY_SCALE_VALUES)[number]
+    )
+      ? storedScale
+      : 100;
+  } catch {
+    return 100;
+  }
+}
+
+function readSmartphoneMode(): boolean {
+  try {
+    return localStorage.getItem(SMARTPHONE_MODE_STORAGE_KEY) === 'true';
+  } catch {
     return false;
   }
 }
@@ -531,6 +557,9 @@ export default function App() {
   );
   const [showReturnFullscreen, setShowReturnFullscreen] =
     useState(false);
+  const [displayScale, setDisplayScale] = useState(readDisplayScale);
+  const [smartphoneMode, setSmartphoneMode] =
+    useState(readSmartphoneMode);
 
   const docksRef = useRef<DockData[]>(createEmptyDocks());
   const plansRef = useRef<SmartDockPlan[]>([]);
@@ -1731,6 +1760,41 @@ export default function App() {
     );
   };
 
+  const changeDisplayScale = (direction: -1 | 1) => {
+    setDisplayScale((currentScale) => {
+      const currentIndex = DISPLAY_SCALE_VALUES.indexOf(
+        currentScale as (typeof DISPLAY_SCALE_VALUES)[number]
+      );
+      const safeIndex = currentIndex >= 0 ? currentIndex : 2;
+      const nextIndex = Math.min(
+        DISPLAY_SCALE_VALUES.length - 1,
+        Math.max(0, safeIndex + direction)
+      );
+      const nextScale = DISPLAY_SCALE_VALUES[nextIndex];
+      localStorage.setItem(
+        DISPLAY_SCALE_STORAGE_KEY,
+        String(nextScale)
+      );
+      return nextScale;
+    });
+  };
+
+  const resetDisplayScale = () => {
+    setDisplayScale(100);
+    localStorage.setItem(DISPLAY_SCALE_STORAGE_KEY, '100');
+  };
+
+  const toggleSmartphoneMode = () => {
+    setSmartphoneMode((currentMode) => {
+      const nextMode = !currentMode;
+      localStorage.setItem(
+        SMARTPHONE_MODE_STORAGE_KEY,
+        String(nextMode)
+      );
+      return nextMode;
+    });
+  };
+
   const activeDocks = docks.filter(
     (dock) => dock.currentTruck !== null
   ).length;
@@ -1773,6 +1837,12 @@ export default function App() {
           void fetchDockData(true);
         }}
         onLogout={handleLogout}
+        displayScale={displayScale}
+        smartphoneMode={smartphoneMode}
+        onScaleDecrease={() => changeDisplayScale(-1)}
+        onScaleIncrease={() => changeDisplayScale(1)}
+        onScaleReset={resetDisplayScale}
+        onToggleSmartphoneMode={toggleSmartphoneMode}
       />
 
       {errorMessage && (
@@ -1787,10 +1857,21 @@ export default function App() {
         </div>
       )}
 
-      <main className="flex-1 grid grid-cols-6 divide-x divide-slate-300 bg-slate-200 overflow-hidden">
+      <main
+        className={
+          'sdms-dock-viewport flex-1 bg-slate-200 ' +
+          (smartphoneMode ? 'sdms-smartphone-mode' : 'sdms-desktop-mode')
+        }
+      >
+        <div
+          className="sdms-dock-track"
+          style={{
+            '--sdms-display-scale': displayScale / 100,
+          } as React.CSSProperties}
+        >
         {docks.map((dock) => (
+          <section key={dock.id} className="sdms-dock-slide">
           <DockColumn
-            key={dock.id}
             dock={dock}
             time={time}
             onFinish={() =>
@@ -1824,7 +1905,9 @@ export default function App() {
               );
             }}
           />
+          </section>
         ))}
+        </div>
       </main>
 
       <footer className="h-8 bg-slate-800 text-slate-400 flex items-center justify-between px-6 text-[10px] font-bold uppercase tracking-widest shrink-0">
