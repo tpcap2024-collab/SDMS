@@ -282,7 +282,7 @@ export default function DockColumn({
         <div
           className={
             'flex justify-between gap-2 font-bold ' +
-            (compact ? 'text-sm ' : 'text-xl ') +
+            (compact ? 'text-base ' : 'text-xl ') +
             'text-black'
           }
         >
@@ -293,7 +293,7 @@ export default function DockColumn({
           <div
             className={
               'min-w-0 truncate font-black text-black ' +
-              (compact ? 'text-base' : 'text-2xl')
+              (compact ? 'text-lg' : 'text-2xl')
             }
           >
             {truck.licensePlate}
@@ -360,7 +360,7 @@ export default function DockColumn({
             config.queueContainer
           }
         >
-          <h3 className="mb-3 text-base font-black uppercase leading-none tracking-tight text-blue-600">
+          <h3 className="mb-3 text-lg font-black uppercase leading-none tracking-tight text-blue-600">
             Waiting ({dock.waitingQueue.length})
           </h3>
 
@@ -545,7 +545,7 @@ export default function DockColumn({
           >
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[94vh] overflow-y-auto border-2 border-slate-300">
               <div className="bg-blue-600 p-5 flex justify-between items-center text-white sticky top-0 z-10">
-                <h3 className="font-black text-4xl">รายละเอียดรถ</h3>
+                <h3 className="font-black text-3xl">รายละเอียดรถ</h3>
                 <button
                   type="button"
                   onClick={closeTruckDetails}
@@ -557,36 +557,36 @@ export default function DockColumn({
 
               <div className="p-7 space-y-6">
                 <div className="text-center">
-                  <div className="text-7xl font-black text-black tracking-tight">
+                  <div className="text-5xl font-black text-black tracking-tight">
                     {selectedTruck.licensePlate}
                   </div>
-                  <div className="text-black font-black text-2xl mt-2 uppercase">
+                  <div className="text-black font-black text-xl mt-2 uppercase">
                     ทะเบียนรถ
                   </div>
                 </div>
 
-                <div className="space-y-5 text-xl bg-slate-50 p-6 rounded-xl border-2 border-slate-200">
+                <div className="space-y-4 text-lg bg-slate-50 p-5 rounded-xl border-2 border-slate-200">
                   <div className="flex justify-between border-b border-slate-200 pb-2 gap-3">
-                    <span className="text-black font-black text-2xl">เส้นทาง</span>
-                    <span className="font-black text-3xl text-black text-right">
+                    <span className="text-black font-black text-xl">เส้นทาง</span>
+                    <span className="font-black text-2xl text-black text-right">
                       {selectedTruck.route}
                     </span>
                   </div>
                   <div className="flex justify-between border-b border-slate-200 pb-2 gap-3">
-                    <span className="text-black font-black text-2xl">เวลาลงงาน</span>
-                    <span className="font-black text-3xl text-black text-right">
+                    <span className="text-black font-black text-xl">เวลาลงงาน</span>
+                    <span className="font-black text-2xl text-black text-right">
                       {selectedTruck.eta}
                     </span>
                   </div>
                   <div className="flex justify-between border-b border-slate-200 pb-2 gap-3">
-                    <span className="text-black font-black text-2xl">ชื่อคนขับ</span>
-                    <span className="font-black text-3xl text-black text-right">
+                    <span className="text-black font-black text-xl">ชื่อคนขับ</span>
+                    <span className="font-black text-2xl text-black text-right">
                       {getDisplayText(selectedTruck.driverName)}
                     </span>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <span className="text-black font-black text-2xl">เบอร์โทร</span>
-                    <span className="font-black text-3xl text-black text-right">
+                    <span className="text-black font-black text-xl">เบอร์โทร</span>
+                    <span className="font-black text-2xl text-black text-right">
                       {getDisplayText(selectedTruck.telDriver)}
                     </span>
                   </div>
@@ -636,13 +636,13 @@ export default function DockColumn({
                   onClick={() => setShowMoveDock(true)}
                   disabled={isOperationBusy}
                   className={
-                    'w-full border-2 font-bold py-3 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2 ' +
+                    'w-full min-h-16 border-2 text-xl font-black py-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-3 ' +
                     (isOperationBusy
                       ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
                       : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100')
                   }
                 >
-                  <ArrowRightLeft size={18} />
+                  <ArrowRightLeft size={24} />
                   โยกช่อง
                 </button>
 
@@ -658,7 +658,7 @@ export default function DockColumn({
                           }))
                         }
                         disabled={isOperationBusy}
-                        className="w-full bg-rose-500 border-2 border-rose-500 text-white font-bold py-3 rounded-lg disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400"
+                        className="w-full min-h-16 bg-rose-500 border-2 border-rose-500 text-white text-xl font-black py-4 rounded-xl disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400"
                       >
                         ยกเลิกยืนยันโทร
                       </button>
@@ -666,9 +666,9 @@ export default function DockColumn({
                         type="button"
                         onClick={enterSelectedTruck}
                         disabled={isOperationBusy}
-                        className="w-full bg-blue-600 border-2 border-blue-600 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-1.5 disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400"
+                        className="w-full min-h-16 bg-blue-600 border-2 border-blue-600 text-white text-xl font-black py-4 rounded-xl flex items-center justify-center gap-2 disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400"
                       >
-                        <PlayCircle size={18} />
+                        <PlayCircle size={24} />
                         เข้าช่อง
                       </button>
                     </>
@@ -678,18 +678,18 @@ export default function DockColumn({
                         <a
                           href={selectedPhoneLink}
                           onClick={handlePhoneClick}
-                          className="w-full bg-emerald-50 border-2 border-emerald-200 text-emerald-600 font-bold py-3 rounded-lg hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
+                          className="w-full min-h-16 bg-emerald-50 border-2 border-emerald-200 text-emerald-600 text-xl font-black py-4 rounded-xl hover:bg-emerald-100 transition-colors flex items-center justify-center gap-3"
                         >
-                          <Phone size={18} />
+                          <Phone size={24} />
                           โทรออก
                         </a>
                       ) : (
                         <button
                           type="button"
                           disabled
-                          className="w-full bg-slate-100 border-2 border-slate-200 text-slate-400 font-bold py-3 rounded-lg cursor-not-allowed flex items-center justify-center gap-2"
+                          className="w-full min-h-16 bg-slate-100 border-2 border-slate-200 text-slate-400 text-xl font-black py-4 rounded-xl cursor-not-allowed flex items-center justify-center gap-3"
                         >
-                          <Phone size={18} />
+                          <Phone size={24} />
                           ไม่มีเบอร์โทร
                         </button>
                       )}
@@ -702,7 +702,7 @@ export default function DockColumn({
                           }))
                         }
                         disabled={isOperationBusy}
-                        className="w-full bg-blue-600 border-2 border-blue-600 text-white font-bold py-3 rounded-lg disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400"
+                        className="w-full min-h-16 bg-blue-600 border-2 border-blue-600 text-white text-xl font-black py-4 rounded-xl disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400"
                       >
                         ยืนยันโทรเรียกแล้ว
                       </button>
