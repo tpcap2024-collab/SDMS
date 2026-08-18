@@ -282,7 +282,7 @@ export default function DockColumn({
         <div
           className={
             'flex justify-between gap-2 font-bold ' +
-            (compact ? 'text-base ' : 'text-lg ') +
+            (compact ? 'text-base ' : 'text-xl ') +
             'text-black'
           }
         >
@@ -293,7 +293,7 @@ export default function DockColumn({
           <div
             className={
               'min-w-0 truncate font-black text-black ' +
-              (compact ? 'text-lg' : 'text-xl')
+              (compact ? 'text-lg' : 'text-2xl')
             }
           >
             {truck.licensePlate}
@@ -306,13 +306,9 @@ export default function DockColumn({
           )}
         </div>
         {!compact && (
-          <div className="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-base leading-tight">
-            <span className="min-w-0 truncate font-bold text-slate-800">
-              {getDisplayText(truck.driverName)}
-            </span>
-            <span className="shrink-0 whitespace-nowrap font-black text-blue-700">
-              {getDisplayText(truck.telDriver)}
-            </span>
+          <div className="mt-1 text-xs text-slate-500 truncate">
+            {getDisplayText(truck.driverName)} ·{' '}
+            {getDisplayText(truck.telDriver)}
           </div>
         )}
       </div>
@@ -513,10 +509,10 @@ export default function DockColumn({
             <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden border border-slate-200 flex flex-col">
               <div className="bg-slate-800 p-4 flex justify-between items-center text-white shrink-0">
                 <div>
-                  <h3 className="font-black text-2xl">
+                  <h3 className="font-black text-xl">
                     รถรอทั้งหมด · {dock.name}
                   </h3>
-                  <p className="text-sm font-bold text-slate-300 mt-1">
+                  <p className="text-xs text-slate-300 mt-1">
                     จำนวน {sortedWaitingQueue.length} คัน เรียงตาม ETA
                   </p>
                 </div>
