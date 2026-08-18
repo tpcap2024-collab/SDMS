@@ -299,9 +299,12 @@ export default function DockColumn({
             {truck.licensePlate}
           </div>
           {truck.isMoved && (
-            <div className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-600 px-2.5 py-1 text-xs font-black text-white shadow-sm">
-              <ArrowRightLeft size={13} />
-              รถโยกช่อง
+            <div
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-white shadow-sm"
+              title="รถโยกช่อง"
+              aria-label="รถโยกช่อง"
+            >
+              <ArrowRightLeft size={16} strokeWidth={2.8} />
             </div>
           )}
         </div>
