@@ -139,8 +139,13 @@ export default function Header({
   };
 
   return (
-    <header className="relative h-20 bg-white border-b border-slate-300 flex items-center justify-between px-4 shrink-0 shadow-sm gap-3">
-      <div className="flex items-center gap-3 shrink-0">
+    <header className={
+      'relative bg-white border-b border-slate-300 shrink-0 shadow-sm ' +
+      (smartphoneMode
+        ? 'flex flex-wrap items-center gap-2 px-2 py-2'
+        : 'h-20 flex items-center justify-between px-4 gap-3')
+    }>
+      <div className={'flex items-center shrink-0 ' + (smartphoneMode ? 'gap-2' : 'gap-3')}>
         <div className="bg-emerald-600 p-2 rounded-lg">
           <Truck
             size={24}
@@ -159,7 +164,12 @@ export default function Header({
         </div>
       </div>
 
-      <div className="flex items-center justify-center gap-4 border-x border-slate-200 px-4 h-full min-w-0">
+      <div className={
+        'flex items-center gap-4 min-w-0 ' +
+        (smartphoneMode
+          ? 'order-3 w-full h-14 overflow-x-auto border-t border-slate-200 px-2 pt-2 justify-start'
+          : 'justify-center border-x border-slate-200 px-4 h-full')
+      }>
         <div className="text-center">
           <p className="text-[9px] text-slate-400 font-bold uppercase">
             Total
@@ -231,59 +241,19 @@ export default function Header({
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-2 shrink-0">
+      <div className={
+        'flex items-center justify-end gap-2 shrink-0 ' +
+        (smartphoneMode ? 'ml-auto' : '')
+      }>
         <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 shadow-sm">
-          <button
-            type="button"
-            onClick={onToggleSmartphoneMode}
-            className={
-              'flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ' +
-              (smartphoneMode
-                ? 'border-blue-600 bg-blue-600 text-white'
-                : 'border-transparent bg-white text-slate-600 hover:bg-slate-100')
-            }
-            title={smartphoneMode ? 'ปิดโหมดสมาร์ตโฟน' : 'เปิดโหมดสมาร์ตโฟน'}
-            aria-label={smartphoneMode ? 'ปิดโหมดสมาร์ตโฟน' : 'เปิดโหมดสมาร์ตโฟน'}
-            aria-pressed={smartphoneMode}
-          >
+          <button type="button" onClick={onToggleSmartphoneMode} className={'flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ' + (smartphoneMode ? 'border-blue-600 bg-blue-600 text-white' : 'border-transparent bg-white text-slate-600 hover:bg-slate-100')} title={smartphoneMode ? 'ปิดโหมดสมาร์ตโฟน' : 'เปิดโหมดสมาร์ตโฟน'} aria-label={smartphoneMode ? 'ปิดโหมดสมาร์ตโฟน' : 'เปิดโหมดสมาร์ตโฟน'} aria-pressed={smartphoneMode}>
             <Smartphone size={20} strokeWidth={2.4} />
           </button>
-
-          <button
-            type="button"
-            onClick={onScaleDecrease}
-            disabled={displayScale <= 80}
-            className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-35"
-            title="ลดขนาดหน้าจอ"
-            aria-label="ลดขนาดหน้าจอ"
-          >
-            <ZoomOut size={19} />
-          </button>
-
-          <button
-            type="button"
-            onClick={onScaleReset}
-            className="flex h-9 min-w-[64px] items-center justify-center gap-1 rounded-lg bg-white px-2 text-sm font-black text-slate-700 hover:bg-slate-100"
-            title="คืนขนาดหน้าจอเป็น 100%"
-            aria-label="คืนขนาดหน้าจอเป็น 100%"
-          >
-            <RotateCcw size={15} />
-            {displayScale}%
-          </button>
-
-          <button
-            type="button"
-            onClick={onScaleIncrease}
-            disabled={displayScale >= 120}
-            className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-35"
-            title="เพิ่มขนาดหน้าจอ"
-            aria-label="เพิ่มขนาดหน้าจอ"
-          >
-            <ZoomIn size={19} />
-          </button>
+          <button type="button" onClick={onScaleDecrease} disabled={displayScale <= 80} className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-35" title="ลดขนาดหน้าจอ" aria-label="ลดขนาดหน้าจอ"><ZoomOut size={19} /></button>
+          <button type="button" onClick={onScaleReset} className="flex h-9 min-w-[64px] items-center justify-center gap-1 rounded-lg bg-white px-2 text-sm font-black text-slate-700 hover:bg-slate-100" title="คืนขนาดเป็น 100%" aria-label="คืนขนาดเป็น 100%"><RotateCcw size={15} />{displayScale}%</button>
+          <button type="button" onClick={onScaleIncrease} disabled={displayScale >= 120} className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-35" title="เพิ่มขนาดหน้าจอ" aria-label="เพิ่มขนาดหน้าจอ"><ZoomIn size={19} /></button>
         </div>
-
-        <label className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5">
+        <label className={(smartphoneMode ? 'hidden ' : 'flex ') + 'items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5'}>
           <CalendarDays
             size={18}
             className="text-emerald-600 shrink-0"
@@ -329,7 +299,7 @@ export default function Header({
           onClick={onRefresh}
           disabled={isRefreshing}
           className={
-            'p-2.5 rounded-lg border transition-colors ' +
+            (smartphoneMode ? 'hidden ' : '') + 'p-2.5 rounded-lg border transition-colors ' +
             (isRefreshing
               ? 'bg-blue-50 border-blue-200 text-blue-500 cursor-wait'
               : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100')
@@ -358,7 +328,7 @@ export default function Header({
         <button
           type="button"
           onClick={toggleFullscreen}
-          className="p-2.5 hover:bg-slate-100 rounded-lg text-slate-500 border border-slate-200 transition-colors"
+          className={(smartphoneMode ? 'hidden ' : '') + 'p-2.5 hover:bg-slate-100 rounded-lg text-slate-500 border border-slate-200 transition-colors'}
           title={
             isFullscreen
               ? 'ออกจาก Full Screen'
@@ -379,7 +349,7 @@ export default function Header({
 
         <button
           type="button"
-          className="p-2.5 hover:bg-slate-100 rounded-lg text-slate-400 relative transition-colors"
+          className={(smartphoneMode ? 'hidden ' : '') + 'p-2.5 hover:bg-slate-100 rounded-lg text-slate-400 relative transition-colors'}
           aria-label="การแจ้งเตือน"
           title="การแจ้งเตือน"
         >
@@ -388,7 +358,7 @@ export default function Header({
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full" />
         </button>
 
-        <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center border-2 border-emerald-500">
+        <div className={(smartphoneMode ? 'hidden ' : '') + 'w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center border-2 border-emerald-500'}>
           <span className="text-emerald-700 font-bold text-sm uppercase">
             OP
           </span>
@@ -397,7 +367,7 @@ export default function Header({
         <button
           type="button"
           onClick={onLogout}
-          className="p-2.5 hover:bg-rose-50 rounded-lg text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 transition-colors"
+          className={(smartphoneMode ? 'hidden ' : '') + 'p-2.5 hover:bg-rose-50 rounded-lg text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 transition-colors'}
           title="ออกจากระบบ"
           aria-label="ออกจากระบบ"
         >
