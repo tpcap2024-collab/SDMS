@@ -282,7 +282,7 @@ export default function DockColumn({
         <div
           className={
             'flex justify-between gap-2 font-bold ' +
-            (compact ? 'text-base ' : 'text-xl ') +
+            (compact ? 'text-base ' : 'text-lg ') +
             'text-black'
           }
         >
@@ -293,7 +293,7 @@ export default function DockColumn({
           <div
             className={
               'min-w-0 truncate font-black text-black ' +
-              (compact ? 'text-lg' : 'text-2xl')
+              (compact ? 'text-lg' : 'text-xl')
             }
           >
             {truck.licensePlate}
@@ -306,12 +306,11 @@ export default function DockColumn({
           )}
         </div>
         {!compact && (
-          <div className="mt-2 flex min-w-0 items-center gap-2 text-base leading-tight">
-            <span className="min-w-0 truncate font-bold text-slate-700">
+          <div className="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-base leading-tight">
+            <span className="min-w-0 truncate font-bold text-slate-800">
               {getDisplayText(truck.driverName)}
             </span>
-            <span className="shrink-0 text-slate-400">·</span>
-            <span className="shrink-0 font-black text-blue-700">
+            <span className="shrink-0 whitespace-nowrap font-black text-blue-700">
               {getDisplayText(truck.telDriver)}
             </span>
           </div>
@@ -734,8 +733,8 @@ export default function DockColumn({
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[94vh] overflow-y-auto border-2 border-slate-300">
               <div className="bg-amber-500 p-5 flex justify-between items-center text-black sticky top-0 z-10">
                 <div>
-                  <h3 className="font-black text-4xl">โยกช่อง</h3>
-                  <p className="text-2xl font-black mt-2">
+                  <h3 className="font-black text-3xl">โยกช่อง</h3>
+                  <p className="text-xl font-black mt-1.5">
                     {selectedTruck.licensePlate} · {selectedTruck.route}
                   </p>
                 </div>
@@ -749,7 +748,7 @@ export default function DockColumn({
               </div>
 
               <div className="p-7">
-                <p className="text-2xl font-black text-black mb-5">
+                <p className="text-xl font-black text-black mb-4">
                   เลือกช่องปลายทาง
                 </p>
                 <div className="grid grid-cols-2 gap-4">
@@ -761,10 +760,10 @@ export default function DockColumn({
                       type="button"
                       onClick={() => moveSelectedTruck(option.code)}
                       disabled={isOperationBusy}
-                      className="min-h-32 rounded-2xl border-2 border-blue-300 bg-blue-50 text-blue-700 shadow-sm hover:bg-blue-100 hover:border-blue-400 transition-colors flex flex-col items-center justify-center"
+                      className="min-h-28 rounded-2xl border-2 border-blue-300 bg-blue-50 text-blue-700 shadow-sm hover:bg-blue-100 hover:border-blue-400 transition-colors flex flex-col items-center justify-center"
                     >
-                      <span className="text-4xl font-black">{option.name}</span>
-                      <span className="text-2xl font-black mt-2">
+                      <span className="text-2xl font-black">{option.name}</span>
+                      <span className="text-lg font-black mt-1">
                         {option.code}
                       </span>
                     </button>
@@ -773,7 +772,7 @@ export default function DockColumn({
                 <button
                   type="button"
                   onClick={() => setShowMoveDock(false)}
-                  className="w-full mt-6 min-h-16 py-4 rounded-xl border-2 border-slate-300 text-black text-2xl font-black hover:bg-slate-50"
+                  className="w-full mt-5 min-h-14 py-3 rounded-xl border-2 border-slate-300 text-black text-xl font-black hover:bg-slate-50"
                 >
                   ยกเลิก
                 </button>
