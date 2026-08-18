@@ -92,9 +92,7 @@ const DOCK_INDEX_BY_CODE: Record<string, number> =
   );
 
 const SESSION_STORAGE_KEY = 'sdms-session';
-const DISPLAY_SCALE_STORAGE_KEY = 'sdms-display-scale';
 const SMARTPHONE_MODE_STORAGE_KEY = 'sdms-smartphone-mode';
-const DISPLAY_SCALE_VALUES = [80, 90, 100, 110, 120] as const;
 const SESSION_DURATION_MS = 43200000;
 const CONFIRMATION_RETRY_MS = 3000;
 const CONFIRMATION_TIMEOUT_MS = 60000;
@@ -182,16 +180,14 @@ function readStoredSession(): boolean {
   }
 }
 
-function readDisplayScale(): number {
-  try {
-    const value = Number(localStorage.getItem(DISPLAY_SCALE_STORAGE_KEY));
-    return DISPLAY_SCALE_VALUES.includes(value as (typeof DISPLAY_SCALE_VALUES)[number]) ? value : 100;
-  } catch { return 100; }
-}
 function readSmartphoneMode(): boolean {
-  try { return localStorage.getItem(SMARTPHONE_MODE_STORAGE_KEY) === 'true'; }
-  catch { return false; }
+  try {
+    return localStorage.getItem(SMARTPHONE_MODE_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
 }
+
 function saveSession(): void {
   const session: StoredSession = {
     expiresAt: Date.now() + SESSION_DURATION_MS,
@@ -544,8 +540,8 @@ export default function App() {
   );
   const [showReturnFullscreen, setShowReturnFullscreen] =
     useState(false);
-  const [displayScale, setDisplayScale] = useState(readDisplayScale);
-  const [smartphoneMode, setSmartphoneMode] = useState(readSmartphoneMode);
+  const [smartphoneMode, setSmartphoneMode] =
+    useState(readSmartphoneMode);
 
   const docksRef = useRef<DockData[]>(createEmptyDocks());
   const plansRef = useRef<SmartDockPlan[]>([]);
@@ -1746,24 +1742,14 @@ export default function App() {
     );
   };
 
-  const changeDisplayScale = (direction: -1 | 1) => {
-    setDisplayScale((current) => {
-      const found = DISPLAY_SCALE_VALUES.indexOf(current as (typeof DISPLAY_SCALE_VALUES)[number]);
-      const index = found >= 0 ? found : 2;
-      const next = DISPLAY_SCALE_VALUES[Math.min(DISPLAY_SCALE_VALUES.length - 1, Math.max(0, index + direction))];
-      localStorage.setItem(DISPLAY_SCALE_STORAGE_KEY, String(next));
-      return next;
-    });
-  };
-  const resetDisplayScale = () => {
-    setDisplayScale(100);
-    localStorage.setItem(DISPLAY_SCALE_STORAGE_KEY, '100');
-  };
   const toggleSmartphoneMode = () => {
-    setSmartphoneMode((current) => {
-      const next = !current;
-      localStorage.setItem(SMARTPHONE_MODE_STORAGE_KEY, String(next));
-      return next;
+    setSmartphoneMode((currentMode) => {
+      const nextMode = !currentMode;
+      localStorage.setItem(
+        SMARTPHONE_MODE_STORAGE_KEY,
+        String(nextMode)
+      );
+      return nextMode;
     });
   };
 
@@ -1809,11 +1795,7 @@ export default function App() {
           void fetchDockData(true);
         }}
         onLogout={handleLogout}
-        displayScale={displayScale}
         smartphoneMode={smartphoneMode}
-        onScaleDecrease={() => changeDisplayScale(-1)}
-        onScaleIncrease={() => changeDisplayScale(1)}
-        onScaleReset={resetDisplayScale}
         onToggleSmartphoneMode={toggleSmartphoneMode}
       />
 
@@ -1830,7 +1812,7 @@ export default function App() {
       )}
 
       <main className={'sdms-dock-viewport flex-1 bg-slate-200 ' + (smartphoneMode ? 'sdms-smartphone-mode' : 'sdms-desktop-mode')}>
-        <div className="sdms-dock-track" style={{ '--sdms-display-scale': displayScale / 100 } as React.CSSProperties}>
+        <div className="sdms-dock-track">
         {docks.map((dock) => (
           <section key={dock.id} className="sdms-dock-slide">
           <DockColumn
