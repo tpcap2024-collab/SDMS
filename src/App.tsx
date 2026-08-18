@@ -60,6 +60,8 @@ type SmartDockResponse = {
     rows?: SmartDockPlan[];
   };
   error?: string;
+  errorCode?: string;
+  pendingConfirmation?: boolean;
 };
 
 type RuntimePendingOperation = PendingDockOperation & {
@@ -100,6 +102,24 @@ const SUCCESS_BADGE_MS = 2500;
 
 function isInboundProject(plan: SmartDockPlan): boolean {
   return String(plan.project || '').trim().toUpperCase() === 'INBOUND';
+}
+
+function shouldWaitForConfirmation(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? error.message
+      : String(error || '');
+  const normalizedMessage = message.toLowerCase();
+  return (
+    error instanceof DOMException && error.name === 'AbortError' ||
+    normalizedMessage.includes('aborterror') ||
+    normalizedMessage.includes('operation was aborted') ||
+    normalizedMessage.includes('upstream_timeout') ||
+    normalizedMessage.includes('pending_confirmation') ||
+    normalizedMessage.includes('invalid json') ||
+    normalizedMessage.includes('failed to fetch') ||
+    normalizedMessage.includes('networkerror')
+  );
 }
 
 function getBangkokDate(): string {
@@ -648,6 +668,38 @@ export default function App() {
     [clearSuccessTimer, commitDocks]
   );
 
+  const keepOperationPending = useCallback(
+    (codeRun: string, dockId: string) => {
+      const pendingOperation =
+        pendingOperationsRef.current.get(codeRun);
+      if (!pendingOperation) {
+        return false;
+      }
+      pendingOperation.phase = 'confirming';
+      pendingOperation.lastCheckedAt = Date.now();
+      pendingOperation.errorMessage = '';
+      pendingOperationsRef.current.set(codeRun, pendingOperation);
+      commitDocks((currentDocks) =>
+        currentDocks.map((dock) =>
+          dock.id === dockId
+            ? {
+                ...dock,
+                operationState: {
+                  ...createOperationState(pendingOperation),
+                  message: 'รอตรวจสอบผล',
+                },
+              }
+            : dock
+        )
+      );
+      setErrorMessage(
+        'ระบบรับคำสั่งแล้วและกำลังตรวจสอบผล กรุณาอย่ากดซ้ำ'
+      );
+      return true;
+    },
+    [commitDocks]
+  );
+
   const scheduleConfirmationCheck = useCallback(() => {
     if (confirmationTimerRef.current) {
       clearTimeout(confirmationTimerRef.current);
@@ -1188,6 +1240,11 @@ export default function App() {
       setLastSync(new Date());
       scheduleConfirmationCheck();
     } catch (error: unknown) {
+      if (shouldWaitForConfirmation(error)) {
+        keepOperationPending(truckId, dockId);
+        scheduleConfirmationCheck();
+        return;
+      }
       pendingOperationsRef.current.delete(truckId);
 
       const message =
@@ -1362,6 +1419,11 @@ export default function App() {
       setLastSync(new Date());
       scheduleConfirmationCheck();
     } catch (error: unknown) {
+      if (shouldWaitForConfirmation(error)) {
+        keepOperationPending(currentTruck.id, dockId);
+        scheduleConfirmationCheck();
+        return;
+      }
       pendingOperationsRef.current.delete(currentTruck.id);
 
       const message =
@@ -1611,6 +1673,11 @@ export default function App() {
         setLastSync(new Date());
         scheduleConfirmationCheck();
       } catch (error: unknown) {
+        if (shouldWaitForConfirmation(error)) {
+          keepOperationPending(truckId, targetDockId);
+          scheduleConfirmationCheck();
+          return;
+        }
         pendingOperationsRef.current.delete(truckId);
 
         const message =
