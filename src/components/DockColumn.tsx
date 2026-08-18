@@ -282,7 +282,7 @@ export default function DockColumn({
         <div
           className={
             'flex justify-between gap-2 font-bold ' +
-            (compact ? 'text-base ' : 'text-xl ') +
+            (compact ? 'text-sm ' : 'text-xl ') +
             'text-black'
           }
         >
@@ -293,7 +293,7 @@ export default function DockColumn({
           <div
             className={
               'min-w-0 truncate font-black text-black ' +
-              (compact ? 'text-lg' : 'text-2xl')
+              (compact ? 'text-base' : 'text-2xl')
             }
           >
             {truck.licensePlate}
@@ -360,7 +360,7 @@ export default function DockColumn({
             config.queueContainer
           }
         >
-          <h3 className="mb-3 text-lg font-black uppercase leading-none tracking-tight text-blue-600">
+          <h3 className="mb-3 text-base font-black uppercase leading-none tracking-tight text-blue-600">
             Waiting ({dock.waitingQueue.length})
           </h3>
 
